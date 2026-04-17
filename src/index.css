@@ -1,0 +1,251 @@
+@import url("https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;700;800&family=Noto+Sans+JP:wght@300;400;500&display=swap");
+
+/* ══ COMPAT-DETAIL STYLES ══ */
+#pf-compat-view { display: none; }
+
+:root {
+  --bg:       #0D0D1A;
+  --surface:  #1A1A2E;
+  --field-bg: #1A0E04;
+  --border:   rgba(255,255,255,.07);
+  --gold:     #C9A84C;
+  --gold-l:   #E8C96A;
+  --gold-dim: rgba(201,168,76,.55);
+  --gold-bdr: rgba(201,168,76,.45);
+  --text:     #E8E4D9;
+  --muted:    rgba(255,255,255,.35);
+  --sub:      rgba(232,228,217,.75);
+  --pink:     #e0607a;
+  --blue:     #5ab8e0;
+  --green:    #7ec850;
+  --purple:   #a78bfa;
+}
+*  { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); font-family: 'Noto Sans JP', sans-serif; color: var(--text); min-height: 100vh; }
+
+/* ══ HEADER ══ */
+.hdr {
+  position: sticky; top: 0; z-index: 60;
+  background: rgba(13,13,26,.97);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  padding: 0 20px;
+}
+.hdr-top { display: flex; align-items: center; justify-content: space-between; height: 52px; }
+.hdr-logo { font-family: 'Shippori Mincho', serif; font-size: 15px; font-weight: 800; color: var(--gold); letter-spacing: .18em; display: flex; align-items: center; gap: 8px; }
+.hdr-btns { display: flex; gap: 7px; }
+.hb { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: rgba(255,255,255,.45); font-size: 11px; cursor: pointer; transition: all .15s; white-space: nowrap; }
+.hb:hover { color: var(--text); background: rgba(255,255,255,.09); }
+.hb.on { background: rgba(201,168,76,.1); border-color: rgba(201,168,76,.3); color: var(--gold); }
+
+/* ══ TITLE ══ */
+.title-block { text-align: center; padding: 36px 20px 24px; }
+.t-panda  { font-size: 38px; display: inline-block; margin-bottom: 10px; }
+.t-sub    { font-size: 10px; letter-spacing: .38em; color: var(--gold); margin-bottom: 10px; opacity: .8; }
+.t-main   { font-family: 'Shippori Mincho', serif; font-size: clamp(22px, 4vw, 32px); font-weight: 800; color: var(--gold-l); }
+.t-chip   { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 4px 16px; border-radius: 20px; background: rgba(201,168,76,.1); border: 1px solid rgba(201,168,76,.28); font-size: 12px; color: rgba(232,196,100,.8); }
+
+/* ══ CONTENT ══ */
+.content { max-width: 800px; margin: 0 auto; padding: 0 20px 80px; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 16px; }
+.card.gold-border { border-color: rgba(201,168,76,.22); }
+
+.sec-label { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.sec-en { font-size: 9px; letter-spacing: .28em; color: var(--gold-dim); }
+.sec-ja { font-family: 'Shippori Mincho', serif; font-size: 18px; font-weight: 700; }
+
+.popo { display: flex; gap: 12px; align-items: flex-start; background: rgba(201,168,76,.04); border: 1px solid rgba(201,168,76,.12); border-radius: 12px; padding: 14px 16px; }
+.popo-ic { font-size: 22px; flex-shrink: 0; line-height: 1; }
+.popo-tx { font-family: 'Shippori Mincho', serif; font-size: 14px; line-height: 1.9; color: rgba(232,228,217,.8); }
+
+/* ══ BACK BUTTON ══ */
+.back-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 8px; background: var(--field-bg); border: 1px solid var(--gold-bdr); color: var(--gold); font-size: 12px; font-family: 'Shippori Mincho', serif; font-weight: 700; cursor: pointer; margin-bottom: 20px; transition: all .15s; }
+.back-btn:hover { background: #221204; border-color: var(--gold); }
+
+/* ══ HERO PAIR CARD ══ */
+.hero { background: var(--surface); border: 1px solid rgba(201,168,76,.25); border-radius: 20px; padding: 28px 24px; margin-bottom: 16px; position: relative; overflow: hidden; }
+.hero::before { content:''; position:absolute; inset:0; background: radial-gradient(ellipse at 50% 0%, rgba(201,168,76,.06) 0%, transparent 70%); pointer-events:none; }
+
+.pair-row { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 24px; }
+.person { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; max-width: 160px; }
+.avatar { width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Shippori Mincho', serif; font-size: 22px; font-weight: 800; }
+.avatar.you { background: rgba(80,140,210,.15); border: 2px solid rgba(80,140,210,.4); color: rgba(140,190,240,.9); }
+.avatar.them { background: rgba(224,96,122,.12); border: 2px solid rgba(224,96,122,.3); color: rgba(224,96,122,.9); }
+.p-name { font-family: 'Shippori Mincho', serif; font-size: 14px; font-weight: 700; }
+.p-sub { font-size: 11px; color: var(--muted); }
+.p-mbti { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.mbti-you { background: rgba(80,140,210,.15); border: 1px solid rgba(80,140,210,.3); color: rgba(140,190,240,.9); }
+.mbti-them { background: rgba(224,96,122,.1); border: 1px solid rgba(224,96,122,.25); color: rgba(224,96,122,.85); }
+
+.vs-area { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 16px; flex-shrink: 0; }
+.vs-hearts { font-size: 22px; }
+.vs-label { font-size: 9px; color: var(--muted); letter-spacing: .1em; }
+
+/* ══ TOTAL SCORE ══ */
+.total-score { text-align: center; margin-bottom: 24px; }
+.score-main { display: flex; align-items: center; justify-content: center; gap: 32px; margin-bottom: 20px; flex-wrap: wrap; }
+.score-ring { position: relative; width: 150px; height: 150px; flex-shrink: 0; }
+.score-ring svg { position: absolute; inset: 0; }
+.score-num { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.score-big { font-family: 'Shippori Mincho', serif; font-size: 52px; font-weight: 800; color: var(--gold); line-height: 1; }
+.score-denom { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.score-right { text-align: left; }
+.score-label { font-family: 'Shippori Mincho', serif; font-size: 20px; font-weight: 700; color: var(--gold-l); margin-bottom: 10px; line-height: 1.4; }
+.score-tag { display: inline-block; padding: 4px 16px; border-radius: 20px; background: rgba(201,168,76,.12); border: 1px solid rgba(201,168,76,.3); font-size: 11px; color: var(--gold); letter-spacing: .06em; }
+.score-pair-names { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: var(--sub); font-family: 'Shippori Mincho',serif; }
+.score-pair-sep { color: var(--muted); font-size: 11px; }
+
+/* sub scores */
+.sub-scores { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; margin-top: 4px; }
+.ss { padding: 14px 16px; border-radius: 12px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); display: flex; align-items: center; gap: 14px; }
+.ss-lbl { font-size: 11px; color: var(--muted); flex: 1; }
+.ss-right { text-align: right; }
+.ss-val { font-family: 'Shippori Mincho', serif; font-size: 22px; font-weight: 800; line-height: 1; }
+.ss-bar { height: 3px; border-radius: 2px; margin-top: 6px; background: rgba(255,255,255,.06); overflow: hidden; width: 64px; }
+.ss-fill { height: 100%; border-radius: 2px; }
+
+/* weight note */
+.weight-note { display: flex; gap: 12px; align-items: center; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+.wn-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); }
+.wn-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+/* ══ PERSONALITY CARD ══ */
+.pers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; } /* legacy */
+.pers-card { padding: 16px; border-radius: 14px; }
+.pers-card.blue { background: rgba(80,140,210,.06); border: 1px solid rgba(80,140,210,.18); }
+.pers-card.pink { background: rgba(224,96,122,.06); border: 1px solid rgba(224,96,122,.18); }
+.pc-head { font-size: 10px; letter-spacing: .12em; margin-bottom: 8px; }
+.pc-name { font-family: 'Shippori Mincho', serif; font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+.pc-traits { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.trait { padding: 3px 10px; border-radius: 20px; font-size: 11px; }
+.trait.bl { background: rgba(80,140,210,.12); border: 1px solid rgba(80,140,210,.25); color: rgba(140,190,240,.85); }
+.trait.pk { background: rgba(224,96,122,.1); border: 1px solid rgba(224,96,122,.22); color: rgba(224,96,122,.85); }
+.pc-desc { font-size: 12px; color: rgba(232,228,217,.6); line-height: 1.85; font-family: 'Shippori Mincho', serif; }
+
+/* ══ WHAT THEY THINK ══ */
+.think-card { background: rgba(201,168,76,.04); border: 1px solid rgba(201,168,76,.14); border-radius: 14px; padding: 18px 20px; margin-bottom: 14px; }
+.think-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.think-emoji { font-size: 18px; }
+.think-title { font-family: 'Shippori Mincho', serif; font-size: 14px; font-weight: 700; color: var(--gold); }
+.think-body { font-family: 'Shippori Mincho', serif; font-size: 13px; color: rgba(232,228,217,.75); line-height: 1.95; }
+.think-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.tch { padding: 4px 13px; border-radius: 20px; font-size: 11px; background: rgba(201,168,76,.08); border: 1px solid rgba(201,168,76,.22); color: rgba(201,168,76,.85); font-family: 'Shippori Mincho', serif; }
+
+/* ══ SHIJUU DETAIL ══ */
+.shijuu-section { margin-bottom: 14px; }
+.item-row { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+.item-row:last-child { border-bottom: none; }
+.item-icon { font-size: 22px; flex-shrink: 0; width: 38px; text-align: center; }
+.item-body { flex: 1; }
+.item-title { font-family: 'Shippori Mincho', serif; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.item-subtitle { font-size: 10px; color: var(--gold-dim); letter-spacing: .08em; margin-bottom: 6px; }
+.item-desc { font-size: 13px; color: rgba(232,228,217,.7); line-height: 1.9; font-family: 'Shippori Mincho', serif; }
+.item-score { flex-shrink: 0; text-align: center; }
+.is-val { font-family: 'Shippori Mincho', serif; font-size: 22px; font-weight: 800; }
+.is-lbl { font-size: 9px; color: var(--muted); }
+
+/* score badge */
+.sbadge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; margin-left: 8px; vertical-align: middle; }
+.sbadge.good { background: rgba(100,200,80,.12); border: 1px solid rgba(100,200,80,.28); color: rgba(150,220,100,.9); }
+.sbadge.great { background: rgba(201,168,76,.12); border: 1px solid rgba(201,168,76,.28); color: var(--gold); }
+.sbadge.caution { background: rgba(200,80,60,.1); border: 1px solid rgba(200,80,60,.25); color: rgba(220,110,90,.9); }
+
+/* ══ MBTI DETAIL ══ */
+.mbti-pair { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.mbti-box { padding: 10px 20px; border-radius: 10px; font-family: 'Shippori Mincho', serif; font-size: 18px; font-weight: 800; }
+.mbti-arrow { font-size: 18px; color: var(--muted); }
+.mbti-axis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.axis-row { padding: 12px 14px; border-radius: 10px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); }
+.axis-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.axis-lbl { font-size: 10px; color: var(--muted); letter-spacing: .08em; }
+.axis-match { font-size: 10px; font-weight: 700; }
+.axis-match.m { color: rgba(100,200,80,.9); }
+.axis-match.d { color: rgba(224,96,122,.85); }
+.axis-match.n { color: rgba(200,150,60,.85); }
+.axis-bars { display: flex; gap: 4px; align-items: center; }
+.ab { padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+.ab.you-axis { background: rgba(80,140,210,.15); color: rgba(140,190,240,.9); }
+.ab.them-axis { background: rgba(224,96,122,.1); color: rgba(224,96,122,.85); }
+.ab.same { background: rgba(201,168,76,.1); color: var(--gold); }
+.axis-desc { font-size: 12px; color: rgba(232,228,217,.55); line-height: 1.7; margin-top: 4px; font-family: 'Shippori Mincho', serif; }
+
+/* ══ TIMING SECTION ══ */
+.timing-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+.tm { border-radius: 14px; padding: 16px 14px; text-align: center; }
+.tm.best { background: rgba(201,168,76,.07); border: 1px solid rgba(201,168,76,.22); }
+.tm.good { background: rgba(100,200,80,.05); border: 1px solid rgba(100,200,80,.18); }
+.tm.care { background: rgba(200,80,60,.05); border: 1px solid rgba(200,80,60,.15); }
+.tm-tag { font-size: 9px; letter-spacing: .1em; margin-bottom: 6px; }
+.tm-month { font-family: 'Shippori Mincho', serif; font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.tm-kan { font-family: 'Shippori Mincho', serif; font-size: 12px; opacity: .55; margin-bottom: 8px; }
+.tm-stars { font-size: 13px; margin-bottom: 6px; }
+.tm-desc { font-size: 11px; line-height: 1.75; opacity: .7; }
+
+/* advice section */
+.advice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.adv { padding: 14px 16px; border-radius: 12px; }
+.adv.pos { background: rgba(100,200,80,.05); border: 1px solid rgba(100,200,80,.18); }
+.adv.neg { background: rgba(200,80,60,.05); border: 1px solid rgba(200,80,60,.15); }
+.adv-head { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
+.adv-em { font-size: 16px; }
+.adv-title { font-family: 'Shippori Mincho', serif; font-size: 13px; font-weight: 700; }
+.adv-title.pos { color: rgba(120,210,90,.9); }
+.adv-title.neg { color: rgba(210,100,80,.9); }
+.adv-list { list-style: none; }
+.adv-list li { font-size: 12px; color: rgba(232,228,217,.65); line-height: 1.85; padding: 3px 0; padding-left: 14px; position: relative; font-family: 'Shippori Mincho', serif; }
+.adv-list li::before { content: '・'; position: absolute; left: 0; }
+
+
+/* 言語プルダウンCSS */
+.pf-lang-select-wrap{position:relative;display:inline-flex;align-items:center;}
+.pf-lang-select{
+  appearance:none;-webkit-appearance:none;
+  padding:5px 26px 5px 10px;border-radius:8px;
+  border:1px solid rgba(201,168,76,0.35);
+  background:rgba(13,13,26,0.9);
+  color:rgba(201,168,76,0.9);
+  font-size:13px;cursor:pointer;
+  font-family:inherit;line-height:1.4;
+  outline:none;transition:all 0.2s;
+}
+.pf-lang-select:hover{border-color:rgba(201,168,76,0.7);background:rgba(201,168,76,0.1);}
+.pf-lang-select-arrow{
+  position:absolute;right:7px;top:50%;transform:translateY(-50%);
+  pointer-events:none;font-size:9px;color:rgba(201,168,76,0.7);
+}
+/* レスポンシブ：モバイルでは国旗のみ */
+@media (max-width: 600px) {
+  .pf-hdr-label { display: none; }
+  .pf-lang-select { padding: 5px 22px 5px 6px; font-size: 16px; }
+  .hdr-btns { gap: 4px; }
+}
+
+/* ══ ACCORDION ══ */
+.pf-acc-trigger {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding-right: 28px;
+}
+.pf-acc-arrow {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: rgba(201,168,76,.5);
+  transition: transform 0.3s ease;
+}
+.pf-acc-trigger.open .pf-acc-arrow {
+  transform: translateY(-50%) rotate(180deg);
+}
+.pf-acc-body {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+.pf-acc-body.open {
+  max-height: 9999px;
+  opacity: 1;
+}

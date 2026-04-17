@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🐼 PANDA FORTUNE — 鑑定結果</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;700;800&family=Noto+Sans+JP:wght@300;400;500&display=swap"
+    />
+  </head>
+  <body style="margin:0;padding:0;background:#0e0608">
+    <div id="root"></div>
+
+<div id="pf-compat-view">
+<!-- ══ HEADER ══ -->
+<div class="hdr">
+  <div class="hdr-top">
+    <div class="hdr-logo">🐼 PANDA FORTUNE</div>
+    <div class="hdr-btns">
+      <div class="hb">🏠 トップ</div>
+      <div class="hb">✎ 命式を変更</div>
+      <div class="hb on">👤 マイアカウント</div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ TITLE ══ -->
+<div class="title-block">
+  <div class="t-panda">💞</div>
+  <div class="t-sub">COMPATIBILITY DETAIL · 相 性 詳 細 鑑 定</div>
+  <div class="t-main">あなた × A さんの相性</div>
+  <div id="pf-t-chip" class="t-chip">生年月日占い（INFP）× Aさん（ENFJ）· お互いを高め合える関係</div>
+</div>
+
+<!-- ══ CONTENT ══ -->
+<div class="content">
+
+  <button class="back-btn" onclick="window._pfShowMain()">◁ 相性占いに戻る</button>
+
+  <!-- ① 総合スコア -->
+  <div class="card gold-border">
+    <div class="sec-label">
+      <span class="sec-en">TOTAL SCORE</span>
+      <span class="sec-ja">総合相性スコア</span>
+    </div>
+
+    <!-- ペアビジュアル -->
+    <div class="pair-row">
+      <div class="person">
+        <div class="avatar you">あなた</div>
+        <div class="p-name">あなた</div>
+        <div class="p-sub">1996.10.12 · 女性</div>
+        <div class="p-mbti mbti-you" id="pf-compat-my-mbti">INFP</div>
+      </div>
+      <div class="vs-area">
+        <div class="vs-hearts">💞</div>
+        <div style="font-family:'Shippori Mincho',serif;font-size:11px;color:var(--gold-dim);margin:2px 0;">お互いを高め合える</div>
+        <div class="vs-label">支え合いタイプ</div>
+      </div>
+      <div class="person">
+        <div class="avatar them">A</div>
+        <div class="p-name">A さん</div>
+        <div id="pf-pt-relation-badge" style="display:inline-block;padding:2px 10px;border-radius:20px;background:rgba(224,96,122,.1);border:1px solid rgba(224,96,122,.22);font-size:10px;color:rgba(224,96,122,.8);margin-top:4px;">恋人・パートナー</div>
+        <div class="p-sub">1990.11.18 · 男性</div>
+        <div id="pf-compat-them-mbti" class="p-mbti mbti-them">ENFJ</div>
+      </div>
+    </div>
+
+    <!-- スコアリング（刷新版） -->
+    <div class="total-score">
+      <!-- メインスコア：中央大きく -->
+      <div style="text-align:center;padding:24px 0 4px;position:relative;">
+        <svg width="200" height="200" viewBox="0 0 200 200" style="display:block;margin:0 auto;">
+          <defs>
+            <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#a07a24"/>
+              <stop offset="100%" stop-color="#F0DC88"/>
+            </linearGradient>
+          </defs>
+          <!-- 背景トラック -->
+          <circle cx="100" cy="100" r="82" fill="none" stroke="rgba(255,255,255,.04)" stroke-width="14"/>
+          <!-- スコアアーク -->
+          <circle cx="100" cy="100" r="82" fill="none" stroke="url(#scoreGrad)" stroke-width="14"
+            stroke-dasharray="422 515" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 100 100)"
+            id="pf-score-arc"/>
+        </svg>
+        <!-- 数字のみ円の中央に -->
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;">
+          <div id="pf-score-big" style="font-family:'Shippori Mincho',serif;font-size:56px;font-weight:900;color:var(--gold-l);line-height:1;">82</div>
+          <div style="font-size:12px;color:var(--gold-dim);letter-spacing:.1em;margin-top:2px;">/100</div>
+        </div>
+      </div>
+      <!-- ラベルは円の外・下に -->
+      <div id="pf-score-label" style="text-align:center;font-size:12px;color:var(--muted);letter-spacing:.06em;padding-bottom:20px;">とても強い相性</div>
+
+      <!-- ペア名 -->
+      <div style="text-align:center;margin-bottom:24px;font-size:14px;color:var(--sub);letter-spacing:.05em;font-family:'Shippori Mincho',serif;">
+        <span id="pf-score-myname">あなた</span>
+        <span style="margin:0 10px;color:var(--gold-dim);">×</span>
+        <span id="pf-score-ptname">A さん</span>
+      </div>
+
+      <!-- サブスコア：横バー型 -->
+      <div style="display:flex;flex-direction:column;gap:0;margin-bottom:8px;padding:4px 0;">
+
+        <!-- 生年月日 -->
+        <div style="display:flex;align-items:center;padding:12px 4px;border-bottom:1px solid rgba(255,255,255,.04);">
+          <div style="display:flex;align-items:center;gap:7px;width:120px;flex-shrink:0;">
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--gold);flex-shrink:0;"></div>
+            <span style="font-size:11px;color:rgba(201,168,76,.7);letter-spacing:.04em;">宿命の縁</span>
+          </div>
+          <div style="flex:1;margin:0 12px;height:4px;border-radius:2px;background:rgba(255,255,255,.05);overflow:hidden;">
+            <div id="pf-ss-meishiki-bar" style="height:100%;width:88%;background:linear-gradient(90deg,#a07a24,#F0DC88);border-radius:2px;transition:width 1s cubic-bezier(.4,0,.2,1);"></div>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:2px;width:44px;text-align:right;flex-shrink:0;">
+            <span id="pf-ss-meishiki" style="font-family:'Shippori Mincho',serif;font-size:22px;font-weight:900;color:var(--gold);line-height:1;">88</span>
+            <span style="font-size:9px;color:var(--muted);">点</span>
+          </div>
+        </div>
+
+        <!-- 引き合う力 -->
+        <div style="display:flex;align-items:center;padding:12px 4px;border-bottom:1px solid rgba(255,255,255,.04);">
+          <div style="display:flex;align-items:center;gap:7px;width:120px;flex-shrink:0;">
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--blue);flex-shrink:0;"></div>
+            <span style="font-size:11px;color:rgba(100,180,240,.7);letter-spacing:.04em;">引き合う力</span>
+          </div>
+          <div style="flex:1;margin:0 12px;height:4px;border-radius:2px;background:rgba(255,255,255,.05);overflow:hidden;">
+            <div id="pf-ss-hikiai-bar" style="height:100%;width:80%;background:linear-gradient(90deg,#2a6aaa,#64C8F0);border-radius:2px;transition:width 1s cubic-bezier(.4,0,.2,1);transition-delay:.1s;"></div>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:2px;width:44px;text-align:right;flex-shrink:0;">
+            <span id="pf-ss-hikiai" style="font-family:'Shippori Mincho',serif;font-size:22px;font-weight:900;color:var(--blue);line-height:1;">80</span>
+            <span style="font-size:9px;color:var(--muted);">点</span>
+          </div>
+        </div>
+
+        <!-- MBTI -->
+        <div id="pf-ss-mbti-row" style="display:flex;align-items:center;padding:12px 4px;border-bottom:1px solid rgba(255,255,255,.04);">
+          <div style="display:flex;align-items:center;gap:7px;width:120px;flex-shrink:0;">
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--purple);flex-shrink:0;"></div>
+            <span style="font-size:11px;color:rgba(180,150,240,.7);letter-spacing:.04em;">MBTI相性</span>
+          </div>
+          <div style="flex:1;margin:0 12px;height:4px;border-radius:2px;background:rgba(255,255,255,.05);overflow:hidden;">
+            <div id="pf-ss-mbti-bar" style="height:100%;width:74%;background:linear-gradient(90deg,#6a3aaa,#B496F0);border-radius:2px;transition:width 1s cubic-bezier(.4,0,.2,1);transition-delay:.2s;"></div>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:2px;width:44px;text-align:right;flex-shrink:0;">
+            <span id="pf-ss-mbti" style="font-family:'Shippori Mincho',serif;font-size:22px;font-weight:900;color:var(--purple);line-height:1;">74</span>
+            <span style="font-size:9px;color:var(--muted);">点</span>
+          </div>
+        </div>
+
+        <!-- 恋愛運（LOVEグループのみ表示） -->
+        <div id="pf-ss-love-card" style="display:flex;align-items:center;padding:12px 4px;">
+          <div style="display:flex;align-items:center;gap:7px;width:120px;flex-shrink:0;">
+            <div style="width:6px;height:6px;border-radius:50%;background:var(--pink);flex-shrink:0;"></div>
+            <span id="pf-ss-love-label" style="font-size:11px;color:rgba(224,96,122,.7);letter-spacing:.04em;">恋愛運</span>
+          </div>
+          <div style="flex:1;margin:0 12px;height:4px;border-radius:2px;background:rgba(255,255,255,.05);overflow:hidden;">
+            <div id="pf-ss-love-bar" style="height:100%;width:84%;background:linear-gradient(90deg,#aa2a4a,#F06080);border-radius:2px;transition:width 1s cubic-bezier(.4,0,.2,1);transition-delay:.3s;"></div>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:2px;width:44px;text-align:right;flex-shrink:0;">
+            <span id="pf-ss-love" style="font-family:'Shippori Mincho',serif;font-size:22px;font-weight:900;color:var(--pink);line-height:1;">84</span>
+            <span style="font-size:9px;color:var(--muted);">点</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 重み説明（非表示・JS制御用） -->
+      <div style="display:none;">
+        <span id="pf-legend-mbti">MBTI 15%</span>
+        <span id="pf-legend-jisshin">恋愛運 15%</span>
+      </div>
+    </div>
+
+    <!-- ポポ総評 -->
+    <div class="popo">
+      <img src="data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 40 40%22%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2220%22 cy%3D%2221%22 r%3D%2215%22 fill%3D%22%23F7F3EE%22%2F%3E%3Cellipse cx%3D%2214%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Cellipse cx%3D%2226%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2214%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2226%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2215%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Ccircle cx%3D%2227%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Cellipse cx%3D%2220%22 cy%3D%2223.5%22 rx%3D%222.5%22 ry%3D%221.8%22 fill%3D%22%23A0705A%22%2F%3E%3Cpath d%3D%22M17.5 25.5 Q20 27.5 22.5 25.5%22 stroke%3D%22%23A0705A%22 stroke-width%3D%221%22 fill%3D%22none%22%2F%3E%3C%2Fsvg%3E" width="28" height="28" style="vertical-align:middle;margin-right:2px;" alt="popo"/>
+      <p class="popo-tx">Aさんはあなたにとってとってもいいエネルギーをくれる人なんダよ🐼 Aさんがそばにいるだけで、あなたの感受性や知性がどんどん引き出されるンダ。2人とも「感情を大切にする」タイプで、お互いの内面の深さを本能的にわかり合える、とっても希少な組み合わせンダ✨ 言葉で表現するのが苦手なあなたを、Aさんが自然にサポートしてくれるンダよ。</p>
+    </div>
+  </div>
+
+  <!-- ② 相手はどんな人か -->
+  <div class="card" id="pf-acc-personality">
+    <div class="sec-label pf-acc-trigger" data-acc="pf-acc-personality">
+      <span class="sec-en">PERSONALITY</span>
+      <span class="sec-ja" id="pf-personality-title">相手はどんな人か</span>
+      <span class="pf-acc-arrow">▼</span>
+    </div>
+
+    <!-- 相手のみ（フルワイド） -->
+    <div style="margin-bottom:16px;">
+      <div class="pers-card pink" style="border-color:rgba(224,96,122,.25);">
+        <div id="pf-pt-pchead" class="pc-head" style="color:rgba(224,96,122,.65);">PARTNER · A さん（ENFJ）</div>
+        <div id="pf-pt-pcname" class="pc-name" style="color:rgba(224,96,122,.9);">太陽のような人</div>
+        <div id="pf-pt-pctraits" class="pc-traits">
+          <span class="trait pk">行動力がある</span>
+          <span class="trait pk">人好き</span>
+          <span class="trait pk">面倒見がいい</span>
+          <span class="trait pk">情熱的</span>
+        </div>
+        <div id="pf-pt-pcdesc" class="pc-desc">エネルギッシュで、まわりの人を自然に引っ張るタイプンダ。生年月日の占いでも「情熱と行動力の星」を持っていて、あなたに積極的にアプローチしてくれるんダよ。</div>
+      </div>
+    </div>
+    <!-- 非表示で残す（JS更新用ダミー） -->
+    <div style="display:none;">
+      <div id="pf-you-pchead"></div>
+      <div id="pf-you-pcname"></div>
+      <div id="pf-you-pctraits"></div>
+      <div id="pf-you-pcdesc"></div>
+    </div>
+
+    <!-- Aさんの詳細 -->
+    <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:18px 20px;margin-bottom:14px;">
+      <div style="font-size:10px;letter-spacing:.2em;color:rgba(224,96,122,.55);margin-bottom:10px;">A さんの生年月日占い · 1990年11月18日生まれ</div>
+      <div id="pf-pt-pillars" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;text-align:center;">
+        <div style="padding:10px 8px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+          <div style="font-size:9px;color:var(--muted);margin-bottom:4px;">生まれ年</div>
+          <div style="font-family:'Shippori Mincho',serif;font-size:22px;font-weight:700;">庚</div>
+          <div style="font-family:'Shippori Mincho',serif;font-size:18px;">午</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">行動力の星</div>
+        </div>
+        <div style="padding:10px 8px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+          <div style="font-size:9px;color:var(--muted);margin-bottom:4px;">生まれ月</div>
+          <div style="font-family:'Shippori Mincho',serif;font-size:22px;font-weight:700;">辛</div>
+          <div style="font-family:'Shippori Mincho',serif;font-size:18px;">亥</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">知性の星</div>
+        </div>
+        <div style="padding:10px 8px;border-radius:10px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.28);">
+          <div style="font-size:9px;color:var(--gold-dim);margin-bottom:4px;">本命 ★</div>
+          <div style="font-family:'Shippori Mincho',serif;font-size:22px;font-weight:700;color:var(--gold-l);">庚</div>
+          <div style="font-family:'Shippori Mincho',serif;font-size:18px;color:var(--gold-l);">午</div>
+          <div style="font-size:10px;color:var(--gold-dim);margin-top:2px;">情熱の星</div>
+        </div>
+        <div style="padding:10px 8px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);">
+          <div style="font-size:9px;color:var(--muted);margin-bottom:4px;">生まれ時間</div>
+          <div style="font-family:'Shippori Mincho',serif;font-size:22px;font-weight:700;">甲</div>
+          <div style="font-family:'Shippori Mincho',serif;font-size:18px;">子</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">挑戦の星</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:rgba(232,228,217,.6);line-height:1.9;font-family:'Shippori Mincho',serif;">
+        <span id="pf-pt-pillardesc">Aさんはとにかくエネルギーに満ちた人ンダ。「情熱の星」が2つも重なっているから、やると決めたら猪突猛進タイプンダよ。占い的には「水」の気が運気を上げる人で、水のような感受性を持つあなたとは自然に引き合う関係ンダ🐼</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 相手があなたをどう思っているか -->
+  <div class="card" id="pf-acc-howsee">
+    <div class="sec-label pf-acc-trigger" data-acc="pf-acc-howsee">
+      <span class="sec-en">HOW THEY SEE YOU</span>
+      <span class="sec-ja" id="pf-howsee-title">相手があなたをどう思っているか</span>
+      <span class="pf-acc-arrow">▼</span>
+    </div>
+
+    <div class="think-card">
+      <div class="think-head">
+        <span class="think-emoji">👁</span>
+        <span class="think-title">Aさんの目から見たあなた</span>
+      </div>
+      <div id="pf-think-body1" class="think-body">Aさんにとって、あなたは「自分にはない、とても大切な何か」を持っている人として映るんダよ<img src="data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 40 40%22%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2220%22 cy%3D%2221%22 r%3D%2215%22 fill%3D%22%23F7F3EE%22%2F%3E%3Cellipse cx%3D%2214%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Cellipse cx%3D%2226%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2214%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2226%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2215%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Ccircle cx%3D%2227%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Cellipse cx%3D%2220%22 cy%3D%2223.5%22 rx%3D%222.5%22 ry%3D%221.8%22 fill%3D%22%23A0705A%22%2F%3E%3Cpath d%3D%22M17.5 25.5 Q20 27.5 22.5 25.5%22 stroke%3D%22%23A0705A%22 stroke-width%3D%221%22 fill%3D%22none%22%2F%3E%3C%2Fsvg%3E" width="20" height="20" style="vertical-align:middle" alt="🐼"/></div>
+      <div id="pf-think-chips1" class="think-chips">
+        <span class="tch">知的で神秘的</span>
+        <span class="tch">守ってあげたい</span>
+        <span class="tch">その深さに惹かれる</span>
+        <span class="tch">唯一無二の存在</span>
+      </div>
+    </div>
+
+
+
+
+  </div>
+
+  <!-- ④ 生年月日占いの相性詳細 -->
+  <div class="card" id="pf-acc-astrology">
+    <div class="sec-label pf-acc-trigger" data-acc="pf-acc-astrology">
+      <span class="sec-en">ASTROLOGY COMPATIBILITY</span>
+      <span class="sec-ja">生年月日占いで見る相性</span>
+      <span class="pf-acc-arrow">▼</span>
+    </div>
+
+    <div id="pf-astro-items" class="shijuu-section">
+      <!-- JS で動的生成 (全5項目) -->
+    </div>
+
+    <!-- ⚠️ 命式ベース注意点（P2-B） -->
+    <div id="pf-caution-section" style="margin-top:16px;">
+      <!-- JS で動的生成 -->
+    </div>
+  </div>
+
+  <!-- ⑤ MBTIの相性詳細 -->
+  <div id="pf-mbti-section" class="card pf-acc-card" data-acc-id="pf-acc-mbti">
+    <div class="sec-label pf-acc-trigger" data-acc="pf-acc-mbti">
+      <span class="sec-en">MBTI COMPATIBILITY</span>
+      <span class="sec-ja">MBTIの相性</span>
+      <span class="pf-acc-arrow">▼</span>
+    </div>
+
+    <div class="mbti-pair">
+      <div id="pf-mbti-you-box" class="mbti-box" style="background:rgba(80,140,210,.12);border:1px solid rgba(80,140,210,.28);color:rgba(140,190,240,.9);">INFP</div>
+      <div class="mbti-arrow">×</div>
+      <div id="pf-mbti-them-box" class="mbti-box" style="background:rgba(224,96,122,.1);border:1px solid rgba(224,96,122,.25);color:rgba(224,96,122,.9);">ENFJ</div>
+      <div id="pf-mbti-score-tag" style="margin-left:12px;padding:5px 14px;border-radius:20px;background:rgba(160,120,220,.1);border:1px solid rgba(160,120,220,.25);font-size:12px;color:rgba(180,150,240,.85);font-family:'Shippori Mincho',serif;font-weight:700;">74点・お互いを補い合うタイプ</div>
+    </div>
+
+    <!-- 4軸比較 -->
+    <div class="mbti-axis">
+      <div class="axis-row">
+        <div class="axis-head">
+          <span class="axis-lbl">外向き（E） vs 内向き（I）</span>
+          <span id="pf-axis-ei-badge" class="axis-match d">補い合う</span>
+        </div>
+        <div class="axis-bars">
+          <span id="pf-axis-ei-you" class="ab you-axis">あなた：内向き（I）</span>
+          <span style="font-size:11px;color:var(--muted);padding:0 4px;">×</span>
+          <span id="pf-axis-ei-them" class="ab them-axis">Aさん：外向き（E）</span>
+        </div>
+        <div id="pf-axis-ei-desc" class="axis-desc">Aさんの社交力があなたの世界を広げてくれるンダ。あなたの深い内面が、Aさんに「考える豊かさ」を与えるんダよ。</div>
+      </div>
+      <div class="axis-row">
+        <div class="axis-head">
+          <span class="axis-lbl">直感（N） vs 現実（S）</span>
+          <span id="pf-axis-ns-badge" class="axis-match m">ぴったり一致</span>
+        </div>
+        <div class="axis-bars">
+          <span id="pf-axis-ns-you" class="ab same">あなた：直感（N）</span>
+          <span style="font-size:11px;color:var(--muted);padding:0 4px;">×</span>
+          <span id="pf-axis-ns-them" class="ab same">Aさん：直感（N）</span>
+        </div>
+        <div id="pf-axis-ns-desc" class="axis-desc">2人とも「目に見えないもの・将来の可能性」を大切にするタイプンダ。夢や理想を語り合うと止まらなくなるはずンダよ。</div>
+      </div>
+      <div class="axis-row">
+        <div class="axis-head">
+          <span class="axis-lbl">感情（F） vs 論理（T）</span>
+          <span id="pf-axis-ft-badge" class="axis-match m">ぴったり一致</span>
+        </div>
+        <div class="axis-bars">
+          <span id="pf-axis-ft-you" class="ab same">あなた：感情（F）</span>
+          <span style="font-size:11px;color:var(--muted);padding:0 4px;">×</span>
+          <span id="pf-axis-ft-them" class="ab same">Aさん：感情（F）</span>
+        </div>
+        <div id="pf-axis-ft-desc" class="axis-desc">2人とも「なぜそうしたいか」を、論理より気持ちで判断するタイプンダ。価値観のズレが起きにくい、とても大事な一致ンダよ。</div>
+      </div>
+      <div class="axis-row">
+        <div class="axis-head">
+          <span class="axis-lbl">計画的（J） vs 柔軟（P）</span>
+          <span id="pf-axis-jp-badge" class="axis-match d">補い合う</span>
+        </div>
+        <div class="axis-bars">
+          <span id="pf-axis-jp-you" class="ab you-axis">あなた：柔軟（P）</span>
+          <span style="font-size:11px;color:var(--muted);padding:0 4px;">×</span>
+          <span id="pf-axis-jp-them" class="ab them-axis">Aさん：計画的（J）</span>
+        </div>
+        <div id="pf-axis-jp-desc" class="axis-desc">Aさんが予定を立ててリードしてくれるから、あなたは安心してついていける面があるんダ。ただ「何でも決められすぎる」と感じたら、素直に伝えることが大切ンダよ。</div>
+      </div>
+    </div>
+
+
+
+    <!-- サブタイプ相性（4軸の直下） -->
+    <div id="pf-mbti-subtype-block" style="margin-top:16px;padding:14px 16px;border-radius:12px;background:rgba(160,120,220,.06);border:1px solid rgba(160,120,220,.18);">
+      <div style="font-size:10px;letter-spacing:.15em;color:rgba(180,150,240,.6);margin-bottom:8px;">自己主張型（A） vs 慎重型（T）</div>
+      <div id="pf-mbti-subtype-label" style="font-family:'Shippori Mincho',serif;font-size:14px;font-weight:700;color:rgba(180,150,240,.9);margin-bottom:8px;">─</div>
+      <div id="pf-mbti-subtype-desc" style="font-size:12px;color:rgba(232,228,217,.65);line-height:1.9;font-family:'Shippori Mincho',serif;">─</div>
+    </div>
+
+    <!-- ペア固有テキスト（まとめセクション：引き合う理由〜愛し方・話し方統合） -->
+    <div id="pf-mbti-pair-block" style="margin-top:16px;padding:16px 18px;border-radius:14px;background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.15);">
+      <div id="pf-pair-title" style="font-family:'Shippori Mincho',serif;font-size:15px;font-weight:800;color:rgba(232,208,120,.9);margin-bottom:6px;">─</div>
+      <div id="pf-pair-sublabel" style="display:inline-block;margin-bottom:14px;padding:3px 12px;border-radius:20px;background:rgba(160,120,220,.1);border:1px solid rgba(160,120,220,.22);font-size:11px;color:rgba(180,150,240,.8);font-family:'Shippori Mincho',serif;"></div>
+      <!-- MBTI軸ベース intro（軸の組み合わせから算出する汎用説明） -->
+      <p id="pf-mbti-intro" style="display:none;font-size:0.9em;color:rgba(200,200,200,.72);border-left:2px solid rgba(160,160,160,.45);padding:2px 0 2px 10px;margin:0 0 10px 0;line-height:1.75;font-family:'Shippori Mincho',serif;"></p>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <div style="font-size:10px;letter-spacing:.15em;color:rgba(100,200,80,.7);margin-bottom:5px;">💚 引き合う理由</div>
+          <div id="pf-pair-attraction" style="font-size:13px;color:rgba(232,228,217,.8);line-height:1.9;font-family:'Shippori Mincho',serif;">─</div>
+        </div>
+        <div>
+          <div style="font-size:10px;letter-spacing:.15em;color:rgba(220,100,80,.7);margin-bottom:5px;">⚡ すれ違いの根本</div>
+          <div id="pf-pair-friction" style="font-size:13px;color:rgba(232,228,217,.8);line-height:1.9;font-family:'Shippori Mincho',serif;">─</div>
+        </div>
+        <div>
+          <div style="font-size:10px;letter-spacing:.15em;color:rgba(100,160,240,.7);margin-bottom:5px;">🔑 成長のカギ</div>
+          <div id="pf-pair-growth" style="font-size:13px;color:rgba(232,228,217,.8);line-height:1.9;font-family:'Shippori Mincho',serif;">─</div>
+        </div>
+        <div>
+          <div style="font-size:10px;letter-spacing:.15em;color:rgba(201,168,76,.7);margin-bottom:5px;">✨ 2人が深くつながるとき</div>
+          <div id="pf-pair-best" style="font-size:13px;color:rgba(232,228,217,.8);line-height:1.9;font-family:'Shippori Mincho',serif;">─</div>
+        </div>
+        <div>
+          <div style="font-size:10px;letter-spacing:.15em;color:rgba(180,150,240,.7);margin-bottom:5px;">💜 2人の愛し方・話し方</div>
+          <div id="pf-pair-lovecomm" style="font-size:13px;color:rgba(232,228,217,.8);line-height:1.9;font-family:'Shippori Mincho',serif;">─</div>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+
+  <!-- ✦ 四柱推命 × MBTI 深化ブロック（4軸統合版） -->
+  <div class="card" id="pf-acc-synthesis">
+    <div class="sec-label pf-acc-trigger" data-acc="pf-acc-synthesis">
+      <span class="sec-en" style="color:rgba(201,168,76,.7);">✦ SYNTHESIS</span>
+      <span class="sec-ja" style="font-size:18px;">2つの占いが重なると見えてくるもの</span>
+      <span class="pf-acc-arrow">▼</span>
+    </div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:20px;">
+      四柱推命（生年月日）とMBTIという異なる2つのアプローチを<strong style="color:var(--gold-dim);">4つの軸</strong>で重ねると、2人の本質的な縁が見えてくるんダよ。
+    </div>
+
+    <!-- あなたの命式 × MBTI / 相手の命式 × MBTI（常時表示） -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+      <div style="padding:14px 16px;border-radius:12px;background:rgba(80,140,210,.06);border:1px solid rgba(80,140,210,.16);">
+        <div style="font-size:9px;letter-spacing:.15em;color:rgba(140,190,240,.5);margin-bottom:8px;">あなたの命式 × MBTI</div>
+        <div id="pf-gogyo-you-title" style="font-family:'Shippori Mincho',serif;font-size:13px;font-weight:700;color:rgba(140,190,240,.9);margin-bottom:6px;">─</div>
+        <div id="pf-gogyo-you-gap" style="display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;margin-bottom:8px;"></div>
+        <div id="pf-gogyo-you-body" style="font-size:12px;color:rgba(232,228,217,.72);line-height:1.9;font-family:'Shippori Mincho',serif;">─</div>
+      </div>
+      <div style="padding:14px 16px;border-radius:12px;background:rgba(224,96,122,.05);border:1px solid rgba(224,96,122,.16);">
+        <div style="font-size:9px;letter-spacing:.15em;color:rgba(224,96,122,.5);margin-bottom:8px;">相手の命式 × MBTI</div>
+        <div id="pf-gogyo-them-title" style="font-family:'Shippori Mincho',serif;font-size:13px;font-weight:700;color:rgba(224,96,122,.9);margin-bottom:6px;">─</div>
+        <div id="pf-gogyo-them-gap" style="display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;margin-bottom:8px;"></div>
+        <div id="pf-gogyo-them-body" style="font-size:12px;color:rgba(232,228,217,.72);line-height:1.9;font-family:'Shippori Mincho',serif;">─</div>
+      </div>
+    </div>
+
+    <!-- 統合鑑定文（MBTI両者入力時のみ表示） -->
+    <div id="pf-synthesis-comment" style="padding:20px 22px;border-radius:14px;background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.22);">
+      <div style="font-size:9px;letter-spacing:.2em;color:rgba(201,168,76,.6);margin-bottom:10px;">✦ 2つの占いが重なって見えてくること</div>
+      <div id="pf-mbti-gogyo-comment" style="font-size:14px;color:rgba(232,228,217,.88);line-height:2.1;font-family:'Shippori Mincho',serif;">─</div>
+    </div>
+  </div>
+
+  <!-- ⑥ 二人の相性のいい時期 -->
+  <div class="card" id="pf-acc-timing">
+    <div class="sec-label pf-acc-trigger" data-acc="pf-acc-timing">
+      <span class="sec-en">BEST TIMING</span>
+      <span class="sec-ja">二人の相性がいい時期</span>
+      <span class="pf-acc-arrow">▼</span>
+    </div>
+
+    <!-- 凡例 -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.25);">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--gold);flex-shrink:0;"></div>
+        <span style="font-size:11px;color:rgba(232,208,120,.85);">最高の時期</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:rgba(100,200,80,.08);border:1px solid rgba(100,200,80,.22);">
+        <div style="width:8px;height:8px;border-radius:50%;background:rgba(100,200,80,.85);flex-shrink:0;"></div>
+        <span style="font-size:11px;color:rgba(120,210,90,.85);">いい時期</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);">
+        <div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.25);flex-shrink:0;"></div>
+        <span style="font-size:11px;color:var(--muted);">ふつう</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:rgba(200,80,60,.08);border:1px solid rgba(200,80,60,.22);">
+        <div style="width:8px;height:8px;border-radius:50%;background:rgba(200,80,60,.8);flex-shrink:0;"></div>
+        <span style="font-size:11px;color:rgba(210,100,80,.85);">注意が必要な時期</span>
+      </div>
+    </div>
+
+    <!-- タイムライン -->
+    <div id="pf-timing-list" style="position:relative;">
+      <!-- 縦線 -->
+      <div style="position:absolute;left:52px;top:0;bottom:0;width:2px;background:rgba(255,255,255,.07);"></div>
+
+      <!-- 1月 -->
+      <div style="display:flex;gap:0;align-items:flex-start;margin-bottom:4px;">
+        <div style="width:52px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:14px;position:relative;z-index:1;">
+          <div style="width:13px;height:13px;border-radius:50%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.25);"></div>
+        </div>
+        <div style="flex:1;padding:10px 0 10px 16px;border-bottom:1px solid rgba(255,255,255,.04);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:0;">
+            <span style="font-family:'Shippori Mincho',serif;font-size:16px;font-weight:700;color:rgba(255,255,255,.45);min-width:28px;">1月</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.22);">⭐⭐☆☆☆</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.3);">様子見の時期。焦らずゆっくりお互いを知るといいンダ。</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2月 -->
+      <div style="display:flex;gap:0;align-items:flex-start;margin-bottom:4px;">
+        <div style="width:52px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:14px;position:relative;z-index:1;">
+          <div style="width:13px;height:13px;border-radius:50%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.25);"></div>
+        </div>
+        <div style="flex:1;padding:10px 0 10px 16px;border-bottom:1px solid rgba(255,255,255,.04);">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-family:'Shippori Mincho',serif;font-size:16px;font-weight:700;color:rgba(255,255,255,.45);min-width:28px;">2月</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.22);">⭐⭐⭐☆☆</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.3);">じわじわと距離が縮まりやすい時期ンダ。</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3月 ★ GOOD -->
+      <div style="display:flex;gap:0;align-items:flex-start;margin-bottom:4px;">
+        <div style="width:52px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:12px;position:relative;z-index:1;">
+          <div style="width:18px;height:18px;border-radius:50%;background:rgba(100,200,80,.7);border:2px solid rgba(100,200,80,.9);box-shadow:0 0 10px rgba(100,200,80,.4);"></div>
+        </div>
+        <div style="flex:1;padding:8px 0 8px 16px;border-bottom:1px solid rgba(255,255,255,.04);">
+          <div style="background:rgba(100,200,80,.05);border:1px solid rgba(100,200,80,.18);border-radius:12px;padding:12px 16px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+              <span style="font-family:'Shippori Mincho',serif;font-size:18px;font-weight:800;color:rgba(120,210,90,.9);min-width:28px;">3月</span>
+              <span style="padding:2px 10px;border-radius:20px;background:rgba(100,200,80,.15);border:1px solid rgba(100,200,80,.3);font-size:10px;color:rgba(120,210,90,.9);font-weight:700;">いい時期</span>
+              <span style="font-size:12px;color:rgba(120,210,90,.7);">⭐⭐⭐⭐</span>
+            </div>
+            <div style="font-size:13px;color:rgba(232,228,217,.7);line-height:1.85;font-family:'Shippori Mincho',serif;">2人のノリが自然と合いやすい時期ンダよ。一緒にいると楽しい！と感じる瞬間が増えるんダ。デートや旅行の計画を立てるのにぴったりンダ。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4月 ⚠ CAUTION -->
+      <div style="display:flex;gap:0;align-items:flex-start;margin-bottom:4px;">
+        <div style="width:52px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:12px;position:relative;z-index:1;">
+          <div style="width:18px;height:18px;border-radius:50%;background:rgba(200,80,60,.6);border:2px solid rgba(200,80,60,.8);box-shadow:0 0 10px rgba(200,80,60,.3);"></div>
+        </div>
+        <div style="flex:1;padding:8px 0 8px 16px;border-bottom:1px solid rgba(255,255,255,.04);">
+          <div style="background:rgba(200,80,60,.05);border:1px solid rgba(200,80,60,.18);border-radius:12px;padding:12px 16px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+              <span style="font-family:'Shippori Mincho',serif;font-size:18px;font-weight:800;color:rgba(210,100,80,.9);min-width:28px;">4月</span>
+              <span style="padding:2px 10px;border-radius:20px;background:rgba(200,80,60,.12);border:1px solid rgba(200,80,60,.3);font-size:10px;color:rgba(210,100,80,.9);font-weight:700;">⚠ 注意</span>
+              <span style="font-size:12px;opacity:.5;">⭐⭐☆☆☆</span>
+            </div>
+            <div style="font-size:13px;color:rgba(232,228,217,.65);line-height:1.85;font-family:'Shippori Mincho',serif;">小さな勘違いやすれ違いが起きやすい月ンダ。LINEだけで済まさず、直接話すようにするといいんダよ。感情的にならず、落ち着いて話し合うのが大切ンダ<img src="data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 40 40%22%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2220%22 cy%3D%2221%22 r%3D%2215%22 fill%3D%22%23F7F3EE%22%2F%3E%3Cellipse cx%3D%2214%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Cellipse cx%3D%2226%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2214%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2226%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2215%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Ccircle cx%3D%2227%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Cellipse cx%3D%2220%22 cy%3D%2223.5%22 rx%3D%222.5%22 ry%3D%221.8%22 fill%3D%22%23A0705A%22%2F%3E%3Cpath d%3D%22M17.5 25.5 Q20 27.5 22.5 25.5%22 stroke%3D%22%23A0705A%22 stroke-width%3D%221%22 fill%3D%22none%22%2F%3E%3C%2Fsvg%3E" width="20" height="20" style="vertical-align:middle" alt="🐼"/></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5月 ★★ BEST -->
+      <div style="display:flex;gap:0;align-items:flex-start;margin-bottom:4px;">
+        <div style="width:52px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:12px;position:relative;z-index:1;">
+          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#a07a24,#E8C96A);border:2px solid var(--gold-l);box-shadow:0 0 16px rgba(201,168,76,.55);"></div>
+        </div>
+        <div style="flex:1;padding:8px 0 8px 16px;border-bottom:1px solid rgba(255,255,255,.04);">
+          <div style="background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+              <span style="font-family:'Shippori Mincho',serif;font-size:20px;font-weight:800;color:var(--gold-l);min-width:28px;">5月</span>
+              <span style="padding:3px 12px;border-radius:20px;background:rgba(201,168,76,.18);border:1px solid rgba(201,168,76,.4);font-size:10px;color:var(--gold);font-weight:700;">★ 上半期ベスト</span>
+              <span style="font-size:13px;color:var(--gold);">⭐⭐⭐⭐⭐</span>
+            </div>
+            <div style="font-size:14px;color:rgba(232,208,120,.85);line-height:1.9;font-family:'Shippori Mincho',serif;margin-bottom:12px;">占いで2人のエネルギーが最も高まる月ンダ✨ 告白・大切な話し合い・プロポーズに最適なんダよ。ずっと言えなかったことがあるなら、この月に勇気を出すといいんダ<img src="data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 40 40%22%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2220%22 cy%3D%2221%22 r%3D%2215%22 fill%3D%22%23F7F3EE%22%2F%3E%3Cellipse cx%3D%2214%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Cellipse cx%3D%2226%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2214%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2226%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2215%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Ccircle cx%3D%2227%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Cellipse cx%3D%2220%22 cy%3D%2223.5%22 rx%3D%222.5%22 ry%3D%221.8%22 fill%3D%22%23A0705A%22%2F%3E%3Cpath d%3D%22M17.5 25.5 Q20 27.5 22.5 25.5%22 stroke%3D%22%23A0705A%22 stroke-width%3D%221%22 fill%3D%22none%22%2F%3E%3C%2Fsvg%3E" width="20" height="20" style="vertical-align:middle" alt="🐼"/></div>
+            <div style="background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.18);border-radius:10px;padding:12px 14px;">
+              <div style="font-size:10px;letter-spacing:.14em;color:var(--gold-dim);margin-bottom:10px;">なぜ5月がいいのか</div>
+              <div style="display:flex;flex-direction:column;gap:9px;">
+                <div style="display:flex;gap:10px;align-items:flex-start;">
+                  <span style="font-size:13px;flex-shrink:0;margin-top:1px;">⚙️</span>
+                  <div style="font-size:12px;color:rgba(232,228,217,.65);line-height:1.8;font-family:'Shippori Mincho',serif;"><strong style="color:rgba(232,208,120,.8);">5月は「庚（かのえ）の月」</strong> — Aさんの生まれの星（庚）と同じエネルギーが月全体に流れるんダ。Aさんの行動力と積極性が最も高まる時期で、自分から動きたい気持ちが自然とあふれてくるんダよ。</div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:flex-start;">
+                  <span style="font-size:13px;flex-shrink:0;margin-top:1px;">💧</span>
+                  <div style="font-size:12px;color:rgba(232,228,217,.65);line-height:1.8;font-family:'Shippori Mincho',serif;"><strong style="color:rgba(232,208,120,.8);">あなたの調子を上げる「金→水」の流れが起きやすい</strong> — 5月は金の気が強く、あなたの運気アップ要素（金・水）が揃う月ンダ。Aさんの高まったエネルギーをあなたが最大限に受け取れる、理想的なタイミングになるんダよ。</div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:flex-start;">
+                  <span style="font-size:13px;flex-shrink:0;margin-top:1px;">🐴</span>
+                  <div style="font-size:12px;color:rgba(232,228,217,.65);line-height:1.8;font-family:'Shippori Mincho',serif;"><strong style="color:rgba(232,208,120,.8);">5月の地支「午（うま）」が2人の生まれ日と一致</strong> — 2人とも生まれ日の干支が「午」ンダ。5月も地支が午なので、自分の星と月の星が重なる「自分らしさ全開」の時期になるんダよ。本音で話しやすい雰囲気になりやすいんダ。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6月 -->
+      <div style="display:flex;gap:0;align-items:flex-start;margin-bottom:4px;">
+        <div style="width:52px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:14px;position:relative;z-index:1;">
+          <div style="width:13px;height:13px;border-radius:50%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.25);"></div>
+        </div>
+        <div style="flex:1;padding:10px 0 10px 16px;border-bottom:1px solid rgba(255,255,255,.04);">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-family:'Shippori Mincho',serif;font-size:16px;font-weight:700;color:rgba(255,255,255,.45);min-width:28px;">6月</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.22);">⭐⭐⭐☆☆</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.3);">5月の流れを穏やかに続けられる安定期ンダ。</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7月 -->
+      <div style="display:flex;gap:0;align-items:flex-start;margin-bottom:4px;">
+        <div style="width:52px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:14px;position:relative;z-index:1;">
+          <div style="width:13px;height:13px;border-radius:50%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.25);"></div>
+        </div>
+        <div style="flex:1;padding:10px 0 10px 16px;border-bottom:1px solid rgba(255,255,255,.04);">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-family:'Shippori Mincho',serif;font-size:16px;font-weight:700;color:rgba(255,255,255,.45);min-width:28px;">7月</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.22);">⭐⭐⭐☆☆</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.3);">穏やかに過ごせる月。深い話をするのにいい時期ンダ。</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8月 ⚠ CAUTION -->
+      <div style="display:flex;gap:0;align-items:flex-start;margin-bottom:4px;">
+        <div style="width:52px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:12px;position:relative;z-index:1;">
+          <div style="width:18px;height:18px;border-radius:50%;background:rgba(200,80,60,.6);border:2px solid rgba(200,80,60,.8);box-shadow:0 0 10px rgba(200,80,60,.3);"></div>
+        </div>
+        <div style="flex:1;padding:8px 0 8px 16px;border-bottom:1px solid rgba(255,255,255,.04);">
+          <div style="background:rgba(200,80,60,.05);border:1px solid rgba(200,80,60,.18);border-radius:12px;padding:12px 16px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+              <span style="font-family:'Shippori Mincho',serif;font-size:18px;font-weight:800;color:rgba(210,100,80,.9);min-width:28px;">8月</span>
+              <span style="padding:2px 10px;border-radius:20px;background:rgba(200,80,60,.12);border:1px solid rgba(200,80,60,.3);font-size:10px;color:rgba(210,100,80,.9);font-weight:700;">⚠ 注意</span>
+              <span style="font-size:12px;opacity:.5;">⭐⭐☆☆☆</span>
+            </div>
+            <div style="font-size:13px;color:rgba(232,228,217,.65);line-height:1.85;font-family:'Shippori Mincho',serif;">2人それぞれの運気が変動しやすい月ンダ。無理に一緒にいようとせず、少し自分の時間を作って充電するといいんダ。距離を置いても関係は壊れないンダよ<img src="data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 40 40%22%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2220%22 cy%3D%2221%22 r%3D%2215%22 fill%3D%22%23F7F3EE%22%2F%3E%3Cellipse cx%3D%2214%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Cellipse cx%3D%2226%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2214%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2226%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2215%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Ccircle cx%3D%2227%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Cellipse cx%3D%2220%22 cy%3D%2223.5%22 rx%3D%222.5%22 ry%3D%221.8%22 fill%3D%22%23A0705A%22%2F%3E%3Cpath d%3D%22M17.5 25.5 Q20 27.5 22.5 25.5%22 stroke%3D%22%23A0705A%22 stroke-width%3D%221%22 fill%3D%22none%22%2F%3E%3C%2Fsvg%3E" width="20" height="20" style="vertical-align:middle" alt="🐼"/></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9月 ★ GOOD -->
+      <div style="display:flex;gap:0;align-items:flex-start;margin-bottom:4px;">
+        <div style="width:52px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:12px;position:relative;z-index:1;">
+          <div style="width:18px;height:18px;border-radius:50%;background:rgba(100,200,80,.7);border:2px solid rgba(100,200,80,.9);box-shadow:0 0 10px rgba(100,200,80,.4);"></div>
+        </div>
+        <div style="flex:1;padding:8px 0 8px 16px;border-bottom:1px solid rgba(255,255,255,.04);">
+          <div style="background:rgba(100,200,80,.05);border:1px solid rgba(100,200,80,.18);border-radius:12px;padding:12px 16px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+              <span style="font-family:'Shippori Mincho',serif;font-size:18px;font-weight:800;color:rgba(120,210,90,.9);min-width:28px;">9月</span>
+              <span style="padding:2px 10px;border-radius:20px;background:rgba(100,200,80,.15);border:1px solid rgba(100,200,80,.3);font-size:10px;color:rgba(120,210,90,.9);font-weight:700;">いい時期</span>
+              <span style="font-size:12px;color:rgba(120,210,90,.7);">⭐⭐⭐⭐</span>
+            </div>
+            <div style="font-size:13px;color:rgba(232,228,217,.7);line-height:1.85;font-family:'Shippori Mincho',serif;">あなた自身の魅力がぐっと高まる月ンダ。Aさんが「やっぱりこの人すごいな」と改めて気づいてくれやすい時期ンダよ。自信を持って自分らしくいるといいんダ<img src="data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 40 40%22%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2220%22 cy%3D%2221%22 r%3D%2215%22 fill%3D%22%23F7F3EE%22%2F%3E%3Cellipse cx%3D%2214%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Cellipse cx%3D%2226%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2214%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2226%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2215%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Ccircle cx%3D%2227%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Cellipse cx%3D%2220%22 cy%3D%2223.5%22 rx%3D%222.5%22 ry%3D%221.8%22 fill%3D%22%23A0705A%22%2F%3E%3Cpath d%3D%22M17.5 25.5 Q20 27.5 22.5 25.5%22 stroke%3D%22%23A0705A%22 stroke-width%3D%221%22 fill%3D%22none%22%2F%3E%3C%2Fsvg%3E" width="20" height="20" style="vertical-align:middle" alt="🐼"/></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 10月 -->
+      <div style="display:flex;gap:0;align-items:flex-start;margin-bottom:4px;">
+        <div style="width:52px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:14px;position:relative;z-index:1;">
+          <div style="width:13px;height:13px;border-radius:50%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.25);"></div>
+        </div>
+        <div style="flex:1;padding:10px 0 10px 16px;border-bottom:1px solid rgba(255,255,255,.04);">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-family:'Shippori Mincho',serif;font-size:16px;font-weight:700;color:rgba(255,255,255,.45);min-width:28px;">10月</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.22);">⭐⭐⭐☆☆</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.3);">9月の流れを引き継いで穏やかに過ごせる月ンダ。11月への助走期間ンダよ。</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 11月 ★★ BEST -->
+      <div style="display:flex;gap:0;align-items:flex-start;margin-bottom:4px;">
+        <div style="width:52px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:12px;position:relative;z-index:1;">
+          <div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#a07a24,#E8C96A);border:2px solid var(--gold-l);box-shadow:0 0 16px rgba(201,168,76,.55);"></div>
+        </div>
+        <div style="flex:1;padding:8px 0 8px 16px;border-bottom:1px solid rgba(255,255,255,.04);">
+          <div style="background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:14px 18px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+              <span style="font-family:'Shippori Mincho',serif;font-size:20px;font-weight:800;color:var(--gold-l);min-width:36px;">11月</span>
+              <span style="padding:3px 12px;border-radius:20px;background:rgba(201,168,76,.18);border:1px solid rgba(201,168,76,.4);font-size:10px;color:var(--gold);font-weight:700;">★ 年間ベスト</span>
+              <span style="font-size:13px;color:var(--gold);">⭐⭐⭐⭐⭐</span>
+            </div>
+            <div style="font-size:14px;color:rgba(232,208,120,.85);line-height:1.9;font-family:'Shippori Mincho',serif;margin-bottom:12px;">1年の中で2人にとって最もエネルギーが重なる特別な月ンダ✨ 結婚・同棲・これからの話し合いなど、大きな決断にとっても向いているんダよ。この月を逃さないでほしいんダ<img src="data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 40 40%22%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2220%22 cy%3D%2221%22 r%3D%2215%22 fill%3D%22%23F7F3EE%22%2F%3E%3Cellipse cx%3D%2214%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Cellipse cx%3D%2226%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2214%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2226%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2215%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Ccircle cx%3D%2227%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Cellipse cx%3D%2220%22 cy%3D%2223.5%22 rx%3D%222.5%22 ry%3D%221.8%22 fill%3D%22%23A0705A%22%2F%3E%3Cpath d%3D%22M17.5 25.5 Q20 27.5 22.5 25.5%22 stroke%3D%22%23A0705A%22 stroke-width%3D%221%22 fill%3D%22none%22%2F%3E%3C%2Fsvg%3E" width="20" height="20" style="vertical-align:middle" alt="🐼"/></div>
+            <div style="background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.18);border-radius:10px;padding:12px 14px;">
+              <div style="font-size:10px;letter-spacing:.14em;color:var(--gold-dim);margin-bottom:10px;">なぜ11月がいいのか</div>
+              <div style="display:flex;flex-direction:column;gap:9px;">
+                <div style="display:flex;gap:10px;align-items:flex-start;">
+                  <span style="font-size:13px;flex-shrink:0;margin-top:1px;">🍂</span>
+                  <div style="font-size:12px;color:rgba(232,228,217,.65);line-height:1.8;font-family:'Shippori Mincho',serif;"><strong style="color:rgba(232,208,120,.8);">11月は「甲（きのえ）の月」</strong> — 甲は木の気ンダ。木は金（Aさん）が得意な星で、「仕事をしたい・挑戦したい」気持ちが高まるんダ。その分、大切な人へのエネルギーも最大になりやすい時期ンダよ。</div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:flex-start;">
+                  <span style="font-size:13px;flex-shrink:0;margin-top:1px;">🌑</span>
+                  <div style="font-size:12px;color:rgba(232,228,217,.65);line-height:1.8;font-family:'Shippori Mincho',serif;"><strong style="color:rgba(232,208,120,.8);">地支「戌（いぬ）」があなたの月柱と一致</strong> — あなたの生まれ月の地支は戌ンダ。11月の地支も戌なので、自分の持って生まれた「月のエネルギー」が最大限に呼び起こされる月になるんダよ。感情が安定して、心から納得できる判断がしやすくなるんダ。</div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:flex-start;">
+                  <span style="font-size:13px;flex-shrink:0;margin-top:1px;">🔗</span>
+                  <div style="font-size:12px;color:rgba(232,228,217,.65);line-height:1.8;font-family:'Shippori Mincho',serif;"><strong style="color:rgba(232,208,120,.8);">2人の「引き合う力」が最も強まる時期</strong> — 占いで2人の間に見られる「磁石のような引き合い」は、金・木のエネルギーが高まる秋〜初冬に最も活発になるんダ。11月はその頂点で、話し合えば自然とまとまりやすい空気になるんダよ<img src="data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 40 40%22%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2220%22 cy%3D%2221%22 r%3D%2215%22 fill%3D%22%23F7F3EE%22%2F%3E%3Cellipse cx%3D%2214%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Cellipse cx%3D%2226%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2214%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2226%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2215%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Ccircle cx%3D%2227%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Cellipse cx%3D%2220%22 cy%3D%2223.5%22 rx%3D%222.5%22 ry%3D%221.8%22 fill%3D%22%23A0705A%22%2F%3E%3Cpath d%3D%22M17.5 25.5 Q20 27.5 22.5 25.5%22 stroke%3D%22%23A0705A%22 stroke-width%3D%221%22 fill%3D%22none%22%2F%3E%3C%2Fsvg%3E" width="20" height="20" style="vertical-align:middle" alt="🐼"/></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 12月 -->
+      <div style="display:flex;gap:0;align-items:flex-start;">
+        <div style="width:52px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:14px;position:relative;z-index:1;">
+          <div style="width:13px;height:13px;border-radius:50%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.25);"></div>
+        </div>
+        <div style="flex:1;padding:10px 0 10px 16px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-family:'Shippori Mincho',serif;font-size:16px;font-weight:700;color:rgba(255,255,255,.45);min-width:36px;">12月</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.22);">⭐⭐⭐☆☆</span>
+            <span style="font-size:11px;color:rgba(255,255,255,.3);">11月の余韻が続く安定期。2人で1年を振り返るのにいい時期ンダ。</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /タイムライン -->
+
+    <!-- 強みと注意点 -->
+    <div class="advice-grid" style="margin-top:8px;">
+      <div class="adv pos">
+        <div class="adv-head">
+          <span class="adv-em">✦</span>
+          <span class="adv-title pos">2人の強み</span>
+        </div>
+        <ul id="pf-adv-pos" class="adv-list">
+          <li>感受性の深さをお互いわかり合える</li>
+          <li>普通と違う部分も自然と受け入れられる</li>
+          <li>Aさんといるだけであなたの調子が上がりやすい</li>
+          <li>2人とも「夢・理想」を語るのが大好き</li>
+          <li>生まれ日の星が同じで生活観がとても近い</li>
+        </ul>
+      </div>
+      <div class="adv neg">
+        <div class="adv-head">
+          <span class="adv-em">⚠</span>
+          <span class="adv-title neg">気をつけること</span>
+        </div>
+        <ul id="pf-adv-neg" class="adv-list">
+          <li>Aさんの「何でも決めたがる」面があなたを窮屈にさせることも</li>
+          <li>黙って距離を置く癖はAさんを傷つけやすい</li>
+          <li>2027〜2028年は価値観のズレが出やすい時期</li>
+          <li>Aさんの世話焼きが時々プレッシャーになることがある</li>
+          <li>2人とも感情的になりすぎると同じ方向に暴走しやすい</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 最終ポポコメント -->
+    <div class="popo" style="margin-top:4px;">
+      <img src="data:image/svg+xml,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 40 40%22%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%226%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2210%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2230%22 cy%3D%2211%22 r%3D%223.5%22 fill%3D%22%23E8C49A%22%2F%3E%3Ccircle cx%3D%2220%22 cy%3D%2221%22 r%3D%2215%22 fill%3D%22%23F7F3EE%22%2F%3E%3Cellipse cx%3D%2214%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Cellipse cx%3D%2226%22 cy%3D%2218%22 rx%3D%224.5%22 ry%3D%224%22 fill%3D%22%23C4956A%22%2F%3E%3Ccircle cx%3D%2214%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2226%22 cy%3D%2218%22 r%3D%222.2%22 fill%3D%22%233D2B1F%22%2F%3E%3Ccircle cx%3D%2215%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Ccircle cx%3D%2227%22 cy%3D%2217%22 r%3D%220.8%22 fill%3D%22white%22%2F%3E%3Cellipse cx%3D%2220%22 cy%3D%2223.5%22 rx%3D%222.5%22 ry%3D%221.8%22 fill%3D%22%23A0705A%22%2F%3E%3Cpath d%3D%22M17.5 25.5 Q20 27.5 22.5 25.5%22 stroke%3D%22%23A0705A%22 stroke-width%3D%221%22 fill%3D%22none%22%2F%3E%3C%2Fsvg%3E" width="28" height="28" style="vertical-align:middle;margin-right:2px;" alt="popo"/>
+      <p id="pf-popo-final" class="popo-tx">総合的に見て、あなたとAさんの相性は「一緒にいるほどお互いが成長できる、深い縁」ンダ✨ 生年月日の占いでもMBTIでも「補い合える関係」という結果が出ているんだよ。Aさんはあなたの運気そのものを上げてくれる存在だから、長く関係を続けるほど2人ともよくなっていく可能性が高いんダ。大事なことを話し合うなら5月と11月がベストンダよ🐼</p>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+
+
+</div>
+
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
