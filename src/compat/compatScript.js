@@ -1960,7 +1960,7 @@ window._pfRunCompatScript = function() {
       if(isBest)        badge='<span style="padding:4px 12px;border-radius:20px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);font-size:11px;color:rgba(232,208,120,.95);font-weight:700;letter-spacing:.05em;">✦ 最高の時期</span>';
       else if(isSecondBest) badge='<span style="padding:4px 12px;border-radius:20px;background:rgba(100,200,80,.12);border:1px solid rgba(100,200,80,.35);font-size:11px;color:rgba(120,210,90,.95);font-weight:700;letter-spacing:.05em;">いい時期</span>';
       else if(isCaution) badge='<span style="padding:4px 12px;border-radius:20px;background:rgba(200,80,60,.12);border:1px solid rgba(200,80,60,.35);font-size:11px;color:rgba(210,100,80,.95);font-weight:700;letter-spacing:.05em;">注意が必要な時期</span>';
-      var pastOpacity = isPast ? 'opacity:.45;filter:grayscale(.3);' : isCurrent ? 'outline:1px solid rgba(201,168,76,.2);border-radius:8px;' : '';
+      var pastOpacity = isPast ? 'opacity:.45;filter:grayscale(.3);' : '';
 
       if(isBest || isSecondBest || isCaution){
         // 展開カード
