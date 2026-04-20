@@ -97,8 +97,18 @@ const CompatTab = ({ partners, setPartners, myCalc, onShowDetail }) => {
     });
   }, [partners, myCalc]);
 
-  // 鑑定結果からUI用の文章フィールドを生成
+  // 現在の言語を取得するヘルパー
+  const _lang = () => (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+
+  // 鑑定結果からUI用の文章フィールドを生成（言語別テンプレート）
   const buildStrength = (r) => {
+    if (_lang() === 'kr') {
+      if (r.hasShigou) return `지지합(支合)이 성립하고 있어요. 서로를 자연스럽게 끌어당기는 강한 인연을 가진 두 사람이에요🐼`;
+      if (r.hasKango)  return `일주끼리 천간합(干合)이 맺어져 있어요. 사고방식과 가치관이 자연스럽게 조화되는 궁합이에요🐼`;
+      if (r.compatType === '相生型') return `오행이 상생의 관계——${r.myG}과(와) ${r.ptG}이(가) 서로 길러주는, 부드럽게 이어지는 궁합이에요🐼`;
+      if (r.compatType === '比和型') return `같은 ${r.myG}의 기를 가진 두 사람이에요. 감각과 가치관이 비슷해서 함께 있으면 편안한 궁합이에요🐼`;
+      return `서로의 차이가 보완되는, 밸런스형 조합이에요🐼`;
+    }
     if (r.hasShigou) return `支合が成立しているんダ。お互いを自然に引き寄せ合う、強い縁を持つ2人ンダよ🐼`;
     if (r.hasKango)  return `日主同士に干合が結ばれているんダ。考え方や価値観が自然と調和する相性ンダよ🐼`;
     if (r.compatType === '相生型') return `五行が相生の関係——${r.myG}と${r.ptG}が育て合う、やさしく続く相性ンダよ🐼`;
@@ -106,12 +116,21 @@ const CompatTab = ({ partners, setPartners, myCalc, onShowDetail }) => {
     return `互いの違いが補い合う、バランス型の組み合わせンダよ🐼`;
   };
   const buildCaution = (r) => {
+    if (_lang() === 'kr') {
+      if (r.compatType === '相剋型') return `오행이 상극의 관계예요. 말 선택과 거리감을 세심하게 하면, 자극이 배움으로 바뀌는 궁합이에요🐼`;
+      if (r.total < 60) return `서두르지 말고, 서로의 페이스를 존중해 주었으면 해요. 조급해하지 않는 시간이 두 사람을 길러주는 거예요🐼`;
+      if (r.hasShigou || r.hasKango) return `끌어당기는 힘이 강한 만큼, 의존으로 치우치기 쉬운 관계예요. 자신의 중심을 계속 유지해 주세요🐼`;
+      return `작은 엇갈림은 누구에게나 있는 거예요. 차이를 부정하지 않고 받아들이면 좋은 관계가 이어져요🐼`;
+    }
     if (r.compatType === '相剋型') return `五行が相剋の関係ンダ。言葉選びと距離感を丁寧にすれば、刺激が学びに変わる相性ンダよ🐼`;
     if (r.total < 60) return `急ぎすぎず、お互いのペースを尊重してほしいんダ。焦らない時間が2人を育てるんダよ🐼`;
     if (r.hasShigou || r.hasKango) return `引き合う力が強いぶん、依存に偏りやすい関係ンダ。自分の軸を持ち続けてほしいんダよ🐼`;
     return `ちょっとしたすれ違いは誰にでもあるんダ。違いを否定せず受け止めると良い関係が続くんダよ🐼`;
   };
   const buildAdvice = (r) => {
+    if (_lang() === 'kr') {
+      return `"${r.typeLabel}"인 두 사람이에요🐼 총합 ${r.total}점. 명식 궁합 ${r.birthCompatScore}・끌어당기는 힘 ${r.hikiai}・MBTI 궁합 ${r.mbtiScore}의 흐름이에요. 억지로 맞추려 하지 말고, 자연체로 보내는 시간을 소중히 해 주세요.`;
+    }
     return `「${r.typeLabel}」の2人ンダ🐼 総合${r.total}点。命式相性${r.birthCompatScore}・引き合う力${r.hikiai}・MBTI相性${r.mbtiScore}の流れンダよ。無理に合わせようとせず、自然体で過ごす時間を大切にしてほしいんダ。`;
   };
 
@@ -176,11 +195,13 @@ const CompatTab = ({ partners, setPartners, myCalc, onShowDetail }) => {
     <div className="tab-content" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {analyzing && <CompatLoadingOverlay />}
 
-      {/* ── ヘッダーカード ── */}
-      <Card glow>
-        <SectionLabel en="COMPATIBILITY · 相性占い" ja="相性占い" />
-        <PopoSpeech text="好きな人や気になる相手の情報を入力してほしいんダ。四柱推命×MBTIで、2人の相性を徹底的に読み解くんダよ。最大10人まで登録できるんダ🐼" />
-      </Card>
+      {/* ── ヘッダーカード（相手登録時のみ） ── */}
+      {!(partners.length === 0 && !showForm) && (
+        <Card glow>
+          <SectionLabel en="COMPATIBILITY · 相性占い" ja="相性占い" />
+          <PopoSpeech text="好きな人や気になる相手の情報を入力してほしいんダ。四柱推命×MBTIで、2人の相性を徹底的に読み解くんダよ。最大10人まで登録できるんダ🐼" />
+        </Card>
+      )}
 
       {/* ── 登録フォーム ── */}
       {showForm && (
@@ -277,11 +298,13 @@ const CompatTab = ({ partners, setPartners, myCalc, onShowDetail }) => {
 
       {/* ── 登録済み相手リスト ── */}
       {partners.length === 0 && !showForm ? (
-        <Card>
-          <div style={{ textAlign: "center", padding: "32px 0" }}>
-            <p style={{ fontSize: 36, marginBottom: 16 }}>💞</p>
-            <p style={{ fontFamily: "'Shippori Mincho',serif", fontSize: 18, color: C.gold, marginBottom: 10 }}>まだ相手が登録されていないんダ</p>
-            <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 24, lineHeight: 1.8 }}>気になる人・パートナーの情報を入力して<br />相性鑑定を始めてほしいんダ🐼</p>
+        <Card glow>
+          <SectionLabel en="COMPATIBILITY · 相性占い" ja="相性占い" />
+          <PopoSpeech text="好きな人や気になる相手の情報を入力してほしいんダ。四柱推命×MBTIで、2人の相性を徹底的に読み解くんダよ。最大10人まで登録できるんダ🐼" />
+          <div style={{ textAlign: "center", padding: "32px 0 8px", marginTop: 8 }}>
+            <p style={{ fontSize: 44, marginBottom: 20 }}>💞</p>
+            <p style={{ fontFamily: "'Shippori Mincho',serif", fontSize: 18, color: C.gold, marginBottom: 12 }}>まだ相手が登録されていないんダ</p>
+            <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 28, lineHeight: 1.9 }}>気になる人・パートナーの情報を入力して<br />相性鑑定を始めてほしいんダ🐼</p>
             <button onClick={() => setShowForm(true)} style={{ padding: "12px 32px", borderRadius: 12, background: "linear-gradient(135deg,#b8922a,#C9A84C)", border: "none", color: "#1a0d02", fontFamily: "'Shippori Mincho',serif", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
               ＋ 相手を追加する
             </button>
@@ -370,7 +393,7 @@ const CompatTab = ({ partners, setPartners, myCalc, onShowDetail }) => {
             <button onClick={() => { setShowForm(true); setForm(EMPTY_PARTNER); setEditIdx(null); }} style={{ padding: "14px", borderRadius: 14, background: "transparent", border: `1px dashed rgba(201,168,76,0.3)`, color: C.goldDim, cursor: "pointer", fontSize: 14, fontFamily: "'Shippori Mincho',serif", transition: "all 0.2s", width: "100%" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.color = C.gold; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(201,168,76,0.3)"; e.currentTarget.style.color = C.goldDim; }}>
-              ＋ 相手を追加する（{partners.length}/10）
+              <span data-i18n="＋ 相手を追加する">＋ 相手を追加する</span>（{partners.length}/10）
             </button>
           )}
         </>

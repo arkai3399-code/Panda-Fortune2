@@ -577,8 +577,16 @@ export var MBTI_RELATION_TYPES = {
  * @param {string} typeB - "ESFP-T" 形式
  * @returns {{ type: string, subtype: string, desc: string } | null}
  */
+import { MBTI_RELATION_TYPES_KR } from './mbtiRelationTypesKr.js';
+
 export function getRelationType(typeA, typeB) {
   var key = typeA + '_' + typeB;
   var keyReverse = typeB + '_' + typeA;
+  // 言語別: 韓国語モードなら KR 辞書を優先、なければ JA にフォールバック
+  var lang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+  if (lang === 'kr' && MBTI_RELATION_TYPES_KR) {
+    var krV = MBTI_RELATION_TYPES_KR[key] || MBTI_RELATION_TYPES_KR[keyReverse];
+    if (krV) return krV;
+  }
   return MBTI_RELATION_TYPES[key] || MBTI_RELATION_TYPES[keyReverse] || null;
 }

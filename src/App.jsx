@@ -15,6 +15,14 @@ import './engines/mbtiEngineRaw.js';
 import './engines/meishikiEngineRaw.js';
 import { GENMEI_TEXTS, getGenmei, getGenmeiTextsByLang } from './data/genmeiText.js';
 import {
+  getGogyoTraitsByLang,
+  getJuniuInfoShort,
+  getJuniuInfoFull,
+} from './data/meishikiSharedTexts.js';
+import { langPick, tt } from './i18n/templateHelpers.js';
+import * as AT from './data/appTemplatesKr.js';
+import { getStarDescByLang, buildStarFallback_JA, buildStarFallback_KR, getKuubouDescByLang, getTsuhenInfoByLang } from './data/meishikiInlineDescs.js';
+import {
   NIKCHU_SELF_PROFILES_KR, JUNIU_NATURE_KR,
   buildGogyoText_KR, buildWeakText_KR, buildKakuDetailText_KR,
   buildKiText_KR, buildJuniuNatureText_KR, buildDuText_KR,
@@ -104,10 +112,11 @@ function buildMeishiki(calc, ui) {
   const HOUR_SHI = ['子','子','丑','丑','寅','寅','卯','卯','辰','辰','巳','巳','午','午','未','未','申','申','酉','酉','戌','戌','亥','亥'];
   const corrH = Math.floor(calc.input.correctedHour);
   const corrM = Math.round((calc.input.correctedHour - corrH) * 60);
+  const _t = (jp) => (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.t) ? window.PF_LANG.t(jp) : jp;
   const corrStr = calc.input.correctionMin !== 0
-    ? `${corrH}:${String(corrM).padStart(2,'0')}（${calc.input.correctionMin > 0 ? '+' : ''}${calc.input.correctionMin}分補正）`
+    ? `${corrH}:${String(corrM).padStart(2,'0')}（${calc.input.correctionMin > 0 ? '+' : ''}${calc.input.correctionMin}${_t('分補正')}）`
     : `${corrH}:${String(corrM).padStart(2,'0')}`;
-  const hourStr = ui.hourInput >= 0 ? `${HOUR_SHI[ui.hourInput]}の刻` : '時間不明';
+  const hourStr = ui.hourInput >= 0 ? `${HOUR_SHI[ui.hourInput]}${_t('の刻')}` : _t('時間不明');
   return {
     name: { last: ui.lastName||'', first: ui.firstName||'' },
     birthDate: `${ui.year}年${ui.month}月${ui.day}日`,
@@ -585,7 +594,17 @@ function calcDailyScore(calc, date) {
   return {total, love, work, money, base, jisshin, dayKan, dayShi, kanshi: dayKan+dayShi, dateStr, rokuyo, rkNichi, sgNichi, jikei};
 }
 
+// ラッパー: genComment は日本語で結果を組み立てた後、現在の言語で翻訳して返す
 function genComment(score, type, jisshin, extra) {
+  const ja = _genCommentJa(score, type, jisshin, extra);
+  if (!ja) return ja;
+  const _lang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+  if (_lang === 'jp') return ja;
+  // PF_LANG.t が辞書にあれば訳語、なければ原文フォールバック
+  return (window.PF_LANG && window.PF_LANG.t) ? (window.PF_LANG.t(ja) || ja) : ja;
+}
+
+function _genCommentJa(score, type, jisshin, extra) {
   var j   = jisshin || '';
   var kiH = extra && extra.kiH;
   var kjH = extra && extra.kjH;
@@ -1203,19 +1222,44 @@ const TodayFortuneBlock = ({ onOpenDetail, calc, offset, setOffset }) => {
 
     // 支合・六冲の特別メッセージ
     let popo;
+    const _dailyLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+    const _dailyKjTip = ki==='水'?'好きな飲み物をゆっくり飲む':ki==='金'?'部屋を少し片付ける':ki==='木'?'外の空気を吸いに行く':ki==='火'?'明るい音楽を流す':'いつもより少し早く寝る';
+    const _dailyKjTipKr = ki==='水'?'좋아하는 음료를 천천히 마신다':ki==='金'?'방을 조금 정리한다':ki==='木'?'바깥 공기를 쐬러 간다':ki==='火'?'밝은 음악을 튼다':'평소보다 조금 일찍 잔다';
+    const _dailyCtx = { highest, lowest, ns, tip: _dailyLang==='kr' ? _dailyKjTipKr : _dailyKjTip, ki };
+
     if(sgH && s.total >= 72) {
-      popo = `${label}（${s.kanshi}日）は縁のエネルギーが特別に開いていた日だったんダ🐼 今日の干支「${s.dayShi}」があなたの生まれ日の地支「${ns}」と特別な関係にあって、恋愛・縁・出会いに関わることが命式的に後押しされていたんだよ。${highest.k}運が${highest.v}点と一番高かったのも偶然じゃないんダ。${label}誰かと会ったり、連絡が来たり、気持ちを伝えたりした瞬間があったなら——それは命式が用意してくれたタイミングだったんダよ🐼`;
+      popo = _dailyLang==='kr'
+        ? AT.buildDailyPopoShigou_KR(label, s, _dailyCtx)
+        : `${label}（${s.kanshi}日）は縁のエネルギーが特別に開いていた日だったんダ🐼 今日の干支「${s.dayShi}」があなたの生まれ日の地支「${ns}」と特別な関係にあって、恋愛・縁・出会いに関わることが命式的に後押しされていたんだよ。${highest.k}運が${highest.v}点と一番高かったのも偶然じゃないんダ。${label}誰かと会ったり、連絡が来たり、気持ちを伝えたりした瞬間があったなら——それは命式が用意してくれたタイミングだったんダよ🐼`;
     } else if(rkH && s.total < 65) {
-      popo = `${label}（${s.kanshi}日）は感情が揺れやすく、気持ちが伝わりにくい日だったんダ🐼 今日の干支「${s.dayShi}」とあなたの生まれ日の地支「${ns}」が対立する関係にあって、言葉が意図と違う方向に伝わったり、タイミングがすれ違いやすい流れだったんだよ。${lowest.k}運${lowest.v}点もそのサインンダ。今日誰かと揉めたり、うまくいかなかった気がするなら——それは相手のせいでも自分のせいでもなく、日の流れのせいだからんダ。引きずらなくていいんダよ🐼`;
+      popo = _dailyLang==='kr'
+        ? AT.buildDailyPopoRokuchuu_KR(label, s, _dailyCtx)
+        : `${label}（${s.kanshi}日）は感情が揺れやすく、気持ちが伝わりにくい日だったんダ🐼 今日の干支「${s.dayShi}」とあなたの生まれ日の地支「${ns}」が対立する関係にあって、言葉が意図と違う方向に伝わったり、タイミングがすれ違いやすい流れだったんだよ。${lowest.k}運${lowest.v}点もそのサインンダ。今日誰かと揉めたり、うまくいかなかった気がするなら——それは相手のせいでも自分のせいでもなく、日の流れのせいだからんダ。引きずらなくていいんダよ🐼`;
     } else if(kjH && kjShiH) {
-      const _tip = ki==='水'?'好きな飲み物をゆっくり飲む':ki==='金'?'部屋を少し片付ける':ki==='木'?'外の空気を吸いに行く':ki==='火'?'明るい音楽を流す':'いつもより少し早く寝る';
-      popo = `${label}（${s.kanshi}日）は、あなたにとって向かい風が重なった日だったんダ🐼 空気の流れがあなたの命式と合っていない日で、何をやってもひと手間余計にかかる感じがあったとしたら、それは本当のことだったんだよ。${lowest.k}運${lowest.v}点——今日は力を入れる日じゃなく、${_tip}だけで十分な日だったんダ。今日をやり過ごせたこと自体が、ちゃんと正解だったんダよ🐼`;
+      popo = _dailyLang==='kr'
+        ? AT.buildDailyPopoKjDouble_KR(label, s, _dailyCtx)
+        : `${label}（${s.kanshi}日）は、あなたにとって向かい風が重なった日だったんダ🐼 空気の流れがあなたの命式と合っていない日で、何をやってもひと手間余計にかかる感じがあったとしたら、それは本当のことだったんだよ。${lowest.k}運${lowest.v}点——今日は力を入れる日じゃなく、${_dailyKjTip}だけで十分な日だったんダ。今日をやり過ごせたこと自体が、ちゃんと正解だったんダよ🐼`;
     } else if(s.total >= 78) {
-      popo = _goodMsgs[js] || `${label}（${s.kanshi}日）は全体的に追い風が来ていた日だったんダ🐼 ${highest.k}運が${highest.v}点と最も高く、命式的に後押しされる流れの中で${label}動いたことはしっかり力になっているんだよ。今日の自分をちゃんと認めてほしいんダよ🐼`;
+      const krFn = AT.dailyPopo_goodMsgs_KR[js];
+      popo = (_dailyLang==='kr' && krFn)
+        ? krFn(label, s, _dailyCtx)
+        : (_goodMsgs[js] || (_dailyLang==='kr'
+            ? AT.buildDailyPopoGoodFallback_KR(label, s, _dailyCtx)
+            : `${label}（${s.kanshi}日）は全体的に追い風が来ていた日だったんダ🐼 ${highest.k}運が${highest.v}点と最も高く、命式的に後押しされる流れの中で${label}動いたことはしっかり力になっているんだよ。今日の自分をちゃんと認めてほしいんダよ🐼`));
     } else if(s.total >= 62) {
-      popo = _midMsgs[js] || `${label}（${s.kanshi}日）は${highest.k}運${highest.v}点と、3つの中では${highest.k}が一番乗っていた日だったんダ🐼 大きな波はなくても、着実に積み上げた時間は必ず後から力になってくるんだよ。今日のコツコツは裏切らないんダよ🐼`;
+      const krFn = AT.dailyPopo_midMsgs_KR[js];
+      popo = (_dailyLang==='kr' && krFn)
+        ? krFn(label, s, _dailyCtx)
+        : (_midMsgs[js] || (_dailyLang==='kr'
+            ? AT.buildDailyPopoMidFallback_KR(label, s, _dailyCtx)
+            : `${label}（${s.kanshi}日）は${highest.k}運${highest.v}点と、3つの中では${highest.k}が一番乗っていた日だったんダ🐼 大きな波はなくても、着実に積み上げた時間は必ず後から力になってくるんだよ。今日のコツコツは裏切らないんダよ🐼`));
     } else {
-      popo = _badMsgs[js] || `${label}（${s.kanshi}日）は命式的に流れが整いにくい日だったんダ🐼 ${lowest.k}運${lowest.v}点が最も低く、今日だけを見ると空回りが多かったかもしれないんだよ。でも、こういう日に無理せず過ごせたことが、次の追い風が来たときの土台になるんダ。今日をちゃんとやり過ごせたこと——それだけで十分ンダよ🐼`;
+      const krFn = AT.dailyPopo_badMsgs_KR[js];
+      popo = (_dailyLang==='kr' && krFn)
+        ? krFn(label, s, _dailyCtx)
+        : (_badMsgs[js] || (_dailyLang==='kr'
+            ? AT.buildDailyPopoBadFallback_KR(label, s, _dailyCtx)
+            : `${label}（${s.kanshi}日）は命式的に流れが整いにくい日だったんダ🐼 ${lowest.k}運${lowest.v}点が最も低く、今日だけを見ると空回りが多かったかもしれないんだよ。でも、こういう日に無理せず過ごせたことが、次の追い風が来たときの土台になるんダ。今日をちゃんとやり過ごせたこと——それだけで十分ンダよ🐼`));
     }
 
     // ── localStorage で3日間保存（4日目に消去） ──────────────────────
@@ -1951,11 +1995,13 @@ const CompatTab = ({ partners, setPartners }) => {
     <div className="tab-content" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {analyzing && <CompatLoadingOverlay />}
 
-      {/* ── ヘッダーカード ── */}
-      <Card glow>
-        <SectionLabel en="COMPATIBILITY · 相性占い" ja="相性占い" />
-        <PopoSpeech text="好きな人や気になる相手の情報を入力してほしいんダ。四柱推命×MBTIで、2人の相性を徹底的に読み解くんダよ。最大10人まで登録できるんダ🐼" />
-      </Card>
+      {/* ── ヘッダーカード（相手登録時のみ） ── */}
+      {!(partners.length === 0 && !showForm) && (
+        <Card glow>
+          <SectionLabel en="COMPATIBILITY · 相性占い" ja="相性占い" />
+          <PopoSpeech text="好きな人や気になる相手の情報を入力してほしいんダ。四柱推命×MBTIで、2人の相性を徹底的に読み解くんダよ。最大10人まで登録できるんダ🐼" />
+        </Card>
+      )}
 
       {/* ── 登録フォーム ── */}
       {showForm && (
@@ -2052,11 +2098,13 @@ const CompatTab = ({ partners, setPartners }) => {
 
       {/* ── 登録済み相手リスト ── */}
       {partners.length === 0 && !showForm ? (
-        <Card>
-          <div style={{ textAlign: "center", padding: "32px 0" }}>
-            <p style={{ fontSize: 36, marginBottom: 16 }}>💞</p>
-            <p style={{ fontFamily: "'Shippori Mincho',serif", fontSize: 18, color: C.gold, marginBottom: 10 }}>まだ相手が登録されていないんダ</p>
-            <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 24, lineHeight: 1.8 }}>気になる人・パートナーの情報を入力して<br />相性鑑定を始めてほしいんダ🐼</p>
+        <Card glow>
+          <SectionLabel en="COMPATIBILITY · 相性占い" ja="相性占い" />
+          <PopoSpeech text="好きな人や気になる相手の情報を入力してほしいんダ。四柱推命×MBTIで、2人の相性を徹底的に読み解くんダよ。最大10人まで登録できるんダ🐼" />
+          <div style={{ textAlign: "center", padding: "32px 0 8px", marginTop: 8 }}>
+            <p style={{ fontSize: 44, marginBottom: 20 }}>💞</p>
+            <p style={{ fontFamily: "'Shippori Mincho',serif", fontSize: 18, color: C.gold, marginBottom: 12 }}>まだ相手が登録されていないんダ</p>
+            <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 28, lineHeight: 1.9 }}>気になる人・パートナーの情報を入力して<br />相性鑑定を始めてほしいんダ🐼</p>
             <button onClick={() => setShowForm(true)} style={{ padding: "12px 32px", borderRadius: 12, background: "linear-gradient(135deg,#b8922a,#C9A84C)", border: "none", color: "#1a0d02", fontFamily: "'Shippori Mincho',serif", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
               ＋ 相手を追加する
             </button>
@@ -2231,24 +2279,9 @@ function generatePopoAnswer(M, question) {
     水:{season:"冬・夜",    dir:"北",   color:"黒・紺",       obj:"水辺・川",       lucky:"水・黒・夜"},
   };
 
-  // 五行ごとの特性（基本命式タブの vals 配列と同じ内容）
-  var GOGYO_TRAIT = {
-    水:{trait:"直感力・柔軟性・知性が高い。流れに乗る力が強く、環境に応じて自在に形を変えられる。",
-        weak:"水が少ないと、直感が鈍く固執しやすくなる傾向があるんダ。",
-        supply:"水を補うには、北方位・黒・夜・冬・水辺が吉ンダよ。"},
-    火:{trait:"表現力・情熱・華やかさ。行動力があり、まわりを巻き込む熱量を持っているんダ。",
-        weak:"火が少ないと、自己表現が苦手で引っ込み思案になりやすいんダ。",
-        supply:"火を補うには、南方位・赤・昼・夏・明るい場所が吉ンダよ。"},
-    土:{trait:"安定感・誠実さ・信頼性。地に足がついた判断力と、人を支える包容力があるんダ。",
-        weak:"土が少ないと、根気がなく気持ちが安定しにくい傾向があるんダ。",
-        supply:"土を補うには、中央・黄・午後・土用・山や大地が吉ンダよ。"},
-    木:{trait:"成長・創造・柔軟性。新しいことへの好奇心と、しなやかに伸びていく力があるんダ。",
-        weak:"木が少ないと、発想が固まりやすく新しいことへの踏み出しが遅くなりやすいんダ。",
-        supply:"木を補うには、東方位・緑・朝・春・植物のある場所が吉ンダよ。"},
-    金:{trait:"意志の強さ・鋭さ・美意識。妥協しない精神と、物事を整える力があるんダ。",
-        weak:"金が少ないと、決断力が鈍く優柔不断になりやすい傾向があるんダ。",
-        supply:"金を補うには、西方位・白・夕・秋・金属・鉱石が吉ンダよ。"},
-  };
+  // 五行ごとの特性 — 共通モジュールから言語別に取得
+  var _gtLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+  var GOGYO_TRAIT = getGogyoTraitsByLang(_gtLang);
 
   // 格局説明（基本命式タブの kkDesc ロジックと同一）
   var isJuou = kaku.indexOf("従旺") >= 0 || kaku.indexOf("従強") >= 0;
@@ -3003,6 +3036,8 @@ const MOCK_HISTORY = [
 ];
 
 const AccountDropdown = ({ meishiki, acctOpen, setAcctOpen }) => {
+  const _adLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+  const _isKr = _adLang === 'kr';
   const M = meishiki;
   const ui = M._ui || {};
   const saved = (() => { try { return JSON.parse(localStorage.getItem('pf_acct_info') || '{}'); } catch(e) { return {}; } })();
@@ -3079,7 +3114,7 @@ const AccountDropdown = ({ meishiki, acctOpen, setAcctOpen }) => {
               </div>
               {emailEdit ? (
                 <div>
-                  <input value={editEmail} onChange={e => setEditEmail(e.target.value)} style={InputStyle} placeholder="新しいメールアドレス" type="email" />
+                  <input value={editEmail} onChange={e => setEditEmail(e.target.value)} style={InputStyle} placeholder={_isKr ? '새 이메일 주소' : '新しいメールアドレス'} type="email" />
                   <p style={{ fontSize:10, color:"rgba(232,228,217,0.3)", marginTop:4 }}>※バックエンド接続後に有効化されます</p>
                   <div style={{ display:"flex" }}>
                     <button onClick={() => { alert('メールアドレス変更はバックエンド接続後に有効化されます🐼'); setEmailEdit(false); }} style={{ fontSize:10, color:'#fff', background:'rgba(201,168,76,0.7)', border:'none', borderRadius:6, padding:'4px 12px', cursor:'pointer', marginTop:6 }} data-i18n="変更申請">変更申請</button>
@@ -3104,8 +3139,8 @@ const AccountDropdown = ({ meishiki, acctOpen, setAcctOpen }) => {
                 </div>
                 {pwEdit ? (
                   <div>
-                    <input type="password" placeholder="現在のパスワード" style={{...InputStyle, marginBottom:4}} />
-                    <input type="password" placeholder="新しいパスワード" style={InputStyle} />
+                    <input type="password" placeholder={_isKr ? '현재 비밀번호' : '現在のパスワード'} style={{...InputStyle, marginBottom:4}} />
+                    <input type="password" placeholder={_isKr ? '새 비밀번호' : '新しいパスワード'} style={InputStyle} />
                     <p style={{ fontSize:10, color:"rgba(232,228,217,0.3)", marginTop:4 }}>※バックエンド接続後に有効化されます</p>
                     <div style={{ display:"flex" }}>
                       <button onClick={() => { alert('パスワード変更はバックエンド接続後に有効化されます🐼'); setPwEdit(false); }} style={{ fontSize:10, color:'#fff', background:'rgba(201,168,76,0.7)', border:'none', borderRadius:6, padding:'4px 12px', cursor:'pointer', marginTop:6 }} data-i18n="変更申請">変更申請</button>
@@ -3141,7 +3176,7 @@ const AccountDropdown = ({ meishiki, acctOpen, setAcctOpen }) => {
               <p style={{ fontSize:13, color:"rgba(232,228,217,0.7)", marginTop:3 }}>{nextBilling}</p>
             </div>
             <div style={{ paddingTop:14, textAlign:"center" }}>
-              <button onClick={() => { if(window.confirm('プランを解約しますか？\n解約後は次の更新日から請求が停止されます。')) { alert('Stripeカスタマーポータルへ接続（バックエンド接続後に有効化）🐼'); } }}
+              <button onClick={() => { if(window.confirm(_isKr ? '플랜을 해약하시겠습니까?\n해약 후에는 다음 갱신일부터 청구가 정지됩니다.' : 'プランを解約しますか？\n解約後は次の更新日から請求が停止されます。')) { alert(_isKr ? 'Stripe 고객 포털로 연결 (백엔드 연결 후 활성화)🐼' : 'Stripeカスタマーポータルへ接続（バックエンド接続後に有効化）🐼'); } }}
                 style={{ fontSize:12, color:"rgba(220,100,90,0.9)", background:"rgba(180,50,40,0.08)", border:"1px solid rgba(180,50,40,0.25)", borderRadius:8, padding:"8px 20px", cursor:"pointer", width:"100%" }}>
                 プランを解約する
               </button>
@@ -4088,19 +4123,29 @@ function FortuneResult() {
         <div style={{ maxWidth: 800, margin: "0 auto", padding: "40px 20px 0" }}>
 
           {/* ── タイトルブロック ── */}
+          {(() => {
+            const _ttlLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+            const _ttlIsKr = _ttlLang === 'kr';
+            const _nameTxt = M.name.last || M.name.first
+              ? `${M.name.last}${M.name.first}` + (_ttlIsKr ? '님' : 'さん')
+              : `${M.nichi.kan}${M.nichi.shi}` + (_ttlIsKr ? '일간' : '日主');
+            const _ttlSuffix = _ttlIsKr ? '의 명식' : 'の命式';
+            return (
           <div className="fade-section" style={{ textAlign: "center", marginBottom: 40 }}>
             <div style={{ fontSize: 48, marginBottom: 12, animation: "floatPanda 3s ease-in-out infinite", display: "inline-block", filter: "drop-shadow(0 4px 16px rgba(201,168,76,0.3))" }}><PandaIcon size={36} /></div>
-            <p style={{ fontSize: 10, letterSpacing: "0.45em", color: C.gold, marginBottom: 12, opacity: 0.8 }}>FORTUNE RESULT · 鑑定結果</p>
+            <p style={{ fontSize: 10, letterSpacing: "0.45em", color: C.gold, marginBottom: 12, opacity: 0.8 }}>FORTUNE RESULT · {_ttlIsKr ? '감정 결과' : '鑑定結果'}</p>
             <h1 style={{ fontFamily: "'Shippori Mincho', serif", fontSize: "clamp(28px,5vw,42px)", fontWeight: 800, lineHeight: 1.3, marginBottom: 8 }}>
-              <span className="shimmer-text">{M.name.last || M.name.first ? `${M.name.last}${M.name.first}さん` : `${M.nichi.kan}${M.nichi.shi}日主`}</span>の命式
+              <span className="shimmer-text">{_nameTxt}</span>{_ttlSuffix}
             </h1>
             <p style={{ fontSize: 13, color: C.textMuted, letterSpacing: "0.08em" }}>
               {M.birthDate} · {M.birthTime} · {M.birthPlace}
             </p>
             <div style={{ marginTop: 10, display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(80,140,200,0.1)", border: "1px solid rgba(80,140,200,0.25)", borderRadius: 20, padding: "4px 14px", fontSize: 11, color: C.waterBlue }}>
-              📍 補正済み {M.correctedTime}{M.mbti ? ` · ${M.mbti}` : ''}
+              📍 {_ttlIsKr ? '보정 완료' : '補正済み'} {M.correctedTime}{M.mbti ? ` · ${M.mbti}` : ''}
             </div>
           </div>
+            );
+          })()}
 
           {/* ── タブ ── */}
           <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap", justifyContent: "center" }}>
@@ -4563,7 +4608,7 @@ function FortuneResult() {
 
                 {/* 読み方ヒント */}
                 <div style={{ padding: "10px 14px", background: "rgba(255,255,255,0.02)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.05)", fontSize: 12, color: C.textMuted, lineHeight: 1.8, marginBottom: 10 }}>
-                  日柱（<span style={{ color: C.gold }}>{M.nichi.kan}{M.nichi.shi}</span>）が「あなた自身」を表す最も重要な柱。天干・地支の五行色はその気の属性を示しているンダよ。
+                  {langPick(AT.buildNichiPillarHint_JA, AT.buildNichiPillarHint_KR, M.nichi.kan, M.nichi.shi)}
                 </div>
 
                 <p style={{ fontSize: 10, color: "rgba(255,255,255,0.18)", letterSpacing: "0.05em" }}>
@@ -4679,27 +4724,19 @@ function FortuneResult() {
                 {/* 五行解説カード（動的生成） */}
                 {(() => {
                   const gv = M.gokyo; // {moku, hi, do, kin, sui}
+                  const _gokLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+                  const _gokTxt = AT.getGogyoValsTextByLang(_gokLang);
                   const vals = [
                     { key:'sui', label:'水', val:gv.sui, emoji:'💧', color:C.waterBlue,  bg:'rgba(80,140,200,0.08)',  bd:'rgba(80,140,200,0.2)',
-                      trait:'直感力・柔軟性・知性が高い。流れに乗る力が強く、環境に応じて自在に形を変えられる。',
-                      weak:'水が少ないと、直感が鈍く固執しやすくなる傾向があるんダ。',
-                      supply:'水を補うには、北方位・黒・夜・冬・水辺が吉ンダよ。' },
+                      trait:_gokTxt['水'].trait, weak:_gokTxt['水'].weak, supply:_gokTxt['水'].supply },
                     { key:'hi',  label:'火', val:gv.hi,  emoji:'🔥', color:C.fireRed,    bg:'rgba(180,60,50,0.08)',   bd:'rgba(180,60,50,0.2)',
-                      trait:'表現力・情熱・華やかさ。行動力があり、まわりを巻き込む熱量を持っているんダ。',
-                      weak:'火が少ないと、自己表現が苦手で引っ込み思案になりやすいんダ。',
-                      supply:'火を補うには、南方位・赤・昼・夏・明るい場所が吉ンダよ。' },
+                      trait:_gokTxt['火'].trait, weak:_gokTxt['火'].weak, supply:_gokTxt['火'].supply },
                     { key:'do',  label:'土', val:gv.do,  emoji:'🏔️', color:C.earthYellow, bg:'rgba(160,130,50,0.07)', bd:'rgba(160,130,50,0.2)',
-                      trait:'安定感・誠実さ・信頼性。地に足がついた判断力と、人を支える包容力があるんダ。',
-                      weak:'土が少ないと、根気がなく気持ちが安定しにくい傾向があるんダ。',
-                      supply:'土を補うには、中央・黄・午後・土用・山や大地が吉ンダよ。' },
+                      trait:_gokTxt['土'].trait, weak:_gokTxt['土'].weak, supply:_gokTxt['土'].supply },
                     { key:'moku',label:'木', val:gv.moku,emoji:'🌿', color:C.woodGreen,  bg:'rgba(100,180,80,0.06)',  bd:'rgba(100,180,80,0.15)',
-                      trait:'成長・創造・柔軟性。新しいことへの好奇心と、しなやかに伸びていく力があるんダ。',
-                      weak:'木が少ないと、発想が固まりやすく新しいことへの踏み出しが遅くなりやすいんダ。',
-                      supply:'木を補うには、東方位・緑・朝・春・植物のある場所が吉ンダよ。' },
+                      trait:_gokTxt['木'].trait, weak:_gokTxt['木'].weak, supply:_gokTxt['木'].supply },
                     { key:'kin', label:'金', val:gv.kin, emoji:'⚙️', color:C.metalWhite,  bg:'rgba(180,170,150,0.06)', bd:'rgba(180,170,150,0.18)',
-                      trait:'意志の強さ・鋭さ・美意識。妥協しない精神と、物事を整える力があるんダ。',
-                      weak:'金が少ないと、決断力が鈍く優柔不断になりやすい傾向があるんダ。',
-                      supply:'金を補うには、西方位・白・夕・秋・金属・鉱物が吉ンダよ。' },
+                      trait:_gokTxt['金'].trait, weak:_gokTxt['金'].weak, supply:_gokTxt['金'].supply },
                   ];
                   // 全5行を強さ順に並べ、役割ラベルを付与して全表示
                   const sorted = [...vals].sort((a,b)=>b.val-a.val);
@@ -4710,26 +4747,16 @@ function FortuneResult() {
                   const minVal = sorted[sorted.length-1];
 
                   const roleLabel = (v, idx, item) => {
-                    if(idx===0) return 'あなたの核となる個性';
-                    if(item.val===0) return kishin.includes(item.label)?'補うと運気アップ（喜神）':'補いたいエネルギー';
-                    if(kishin.includes(item.label)) return '喜神 — 追い風の気';
-                    if(item.val===minVal.val && item.key===minVal.key) return kishin.includes(item.label)?'補うと運気アップ（喜神）':'補いたいエネルギー';
-                    const rel1 = SEI[sorted[0].label]===item.label||SEI[item.label]===sorted[0].label;
+                    const isMin = (item.val===minVal.val && item.key===minVal.key);
+                    const rel1  = SEI[sorted[0].label]===item.label||SEI[item.label]===sorted[0].label;
                     const clash = KOKU[sorted[0].label]===item.label||KOKU[item.label]===sorted[0].label;
-                    if(rel1)  return `${sorted[0].label}を支える相生の気`;
-                    if(clash) return `${sorted[0].label}と対立しやすい気`;
-                    return 'バランスの取れたエネルギー';
+                    return langPick(AT.gogyoRoleLabel_JA, AT.gogyoRoleLabel_KR, idx, item, sorted[0].label, kishin, isMin, rel1, clash);
                   };
 
                   const cardDesc = (item, idx) => {
-                    if(item.val===0) return item.supply;
-                    if(idx===0) return item.trait;
                     const rel = SEI[sorted[0].label]===item.label||SEI[item.label]===sorted[0].label;
                     const clash = KOKU[sorted[0].label]===item.label||KOKU[item.label]===sorted[0].label;
-                    if(rel)   return item.trait+` ${sorted[0].label}と${item.label}は相生の関係なので、この2つが高いとエネルギーが自然に循環するんダ。`;
-                    if(clash) return item.trait+` ただし${sorted[0].label}と${item.label}は相剋の関係にあるため、バランスに注意ンダよ。`;
-                    if(item.val<=1.5) return item.weak+' '+item.supply;
-                    return item.trait;
+                    return langPick(AT.gogyoCardDesc_JA, AT.gogyoCardDesc_KR, item, idx, sorted[0].label, rel, clash);
                   };
 
                   return (
@@ -4797,20 +4824,24 @@ function FortuneResult() {
                   const totalScore = (gv.moku+gv.hi+gv.do+gv.kin+gv.sui);
                   const dominantRatio = nGogyo ? (gv[{木:'moku',火:'hi',土:'do',金:'kin',水:'sui'}[nGogyo]]||0)/totalScore : 0;
 
-                  const KI_INFO = {
+                  const _kkLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+                  const KI_INFO_JA = {
                     木:{season:'春・朝',dir:'東',color:'緑・青',obj:'植物・木製品',lucky:'木・緑の場所'},
                     火:{season:'夏・昼',dir:'南',color:'赤・橙',obj:'明るい場所・炎',lucky:'火・明るい場所'},
                     土:{season:'土用・午後',dir:'中央',color:'黄・茶',obj:'土地・山',lucky:'土・山・大地'},
                     金:{season:'秋・夕',dir:'西',color:'白・金属',obj:'金属・鉱石',lucky:'金・金属・白'},
                     水:{season:'冬・夜',dir:'北',color:'黒・紺',obj:'水辺・川',lucky:'水・黒・夜'},
                   };
+                  const KI_INFO = _kkLang === 'kr' ? AT.KI_INFO_KR : KI_INFO_JA;
                   const kiDesc = (() => {
-                    const lines = kiArr.map(g=>KI_INFO[g]?`${KI_INFO[g].season}・${KI_INFO[g].dir}方位・${KI_INFO[g].color}`:'').filter(Boolean);
-                    return lines.length ? lines.join('\n') + '\nが吉ンダよ。' : '';
+                    const lines = kiArr.map(g=>KI_INFO[g]?(_kkLang==='kr'?`${KI_INFO[g].season}・${KI_INFO[g].dir}쪽・${KI_INFO[g].color}`:`${KI_INFO[g].season}・${KI_INFO[g].dir}方位・${KI_INFO[g].color}`):'').filter(Boolean);
+                    if (!lines.length) return '';
+                    return lines.join('\n') + (_kkLang==='kr' ? '\n이(가) 길해요.' : '\nが吉ンダよ。');
                   })();
                   const kjDesc = (() => {
-                    const lines = kjArr.map(g=>KI_INFO[g]?`${KI_INFO[g].season}・${KI_INFO[g].dir}方位・${KI_INFO[g].color}`:'').filter(Boolean);
-                    return lines.length ? lines.join('\n') + '\nの方位・時間帯は消耗しやすいんダ。' : '';
+                    const lines = kjArr.map(g=>KI_INFO[g]?(_kkLang==='kr'?`${KI_INFO[g].season}・${KI_INFO[g].dir}쪽・${KI_INFO[g].color}`:`${KI_INFO[g].season}・${KI_INFO[g].dir}方位・${KI_INFO[g].color}`):'').filter(Boolean);
+                    if (!lines.length) return '';
+                    return lines.join('\n') + (_kkLang==='kr' ? '\n의 방위・시간대는 소모되기 쉬워요.' : '\nの方位・時間帯は消耗しやすいんダ。');
                   })();
 
                   // 格局説明（充実版）
@@ -4818,13 +4849,11 @@ function FortuneResult() {
                   const KOKU_KK= {木:'土',火:'金',土:'水',金:'木',水:'火'};
                   const isJuou = kk.includes('従旺');
                   const kkDesc = (() => {
-                    const kiStr = ki !== '─' ? ki : '喜神';
-                    const kjStr = kj !== '─' ? kj : '忌神';
+                    const kiStr = ki !== '─' ? ki : (_kkLang==='kr'?'희신':'喜神');
+                    const kjStr = kj !== '─' ? kj : (_kkLang==='kr'?'기신':'忌神');
                     if(isJuou && nGogyo){
-                      return `あなたの命式は「${nGogyo}」のエネルギーが全体の${Math.round(dominantRatio*100)}%以上を占める特別な型ンダ。`
-                        +`${nGogyo}の気に逆らうより「${nGogyo}らしく」生きることで本来の力が最大になるんダよ。`
-                        +`喜神の「${kiStr}」が流れてくる${kiArr.map(g=>KI_INFO[g]?.season||'').filter(Boolean).join('・')||'時期'}は特に追い風ンダ。`
-                        +`逆に忌神の「${kjStr}」が強まる時期は無理をしないことが大切ンダ🐼`;
+                      const seasons = kiArr.map(g=>KI_INFO[g]?.season||'').filter(Boolean).join('・');
+                      return langPick(AT.buildKakukyokuDescJuou_JA, AT.buildKakukyokuDescJuou_KR, nGogyo, dominantRatio, kiStr, kjStr, seasons);
                     }
                     // 普通格局
                     const gogyoRanked = ['moku','hi','do','kin','sui']
@@ -4832,10 +4861,8 @@ function FortuneResult() {
                       .sort((a,b)=>b.v-a.v);
                     const top = gogyoRanked[0].g;
                     const bot = gogyoRanked[gogyoRanked.length-1].g;
-                    return `あなたの命式は5つの五行がバランスよく分布している「普通格局」ンダ。`
-                      +`中でも「${top}」が最も強く（${gogyoRanked[0].v}点）、あなたの個性の核になっているんダよ。`
-                      +`喜神の「${kiStr}」の流れが来る時期・場所・人が最大の追い風になるんダ。`
-                      +`逆に「${bot}」は最も少ないエネルギーで（${gogyoRanked[gogyoRanked.length-1].v}点）、ここを補う${KI_INFO[bot]?.lucky||bot+'の気'}を意識すると運気が安定するんダよ🐼`;
+                    const lucky = KI_INFO[bot]?.lucky || (bot + (_kkLang==='kr'?'의 기':'の気'));
+                    return langPick(AT.buildKakukyokuDescNormal_JA, AT.buildKakukyokuDescNormal_KR, top, gogyoRanked[0].v, kiStr, bot, gogyoRanked[gogyoRanked.length-1].v, lucky);
                   })();
                   return (
                     <>
@@ -4876,7 +4903,7 @@ function FortuneResult() {
                                     </div>
                                   ))}
                                 </div>
-                                <p style={{ fontSize:12, color:C.textMuted, lineHeight:1.9, whiteSpace:'pre-line' }}>{kiDesc || `${ki}の気が強い日・場所・人が追い風になるんダよ。`}</p>
+                                <p style={{ fontSize:12, color:C.textMuted, lineHeight:1.9, whiteSpace:'pre-line' }}>{kiDesc || (_kkLang==='kr' ? `${ki}의 기가 강한 날・장소・사람이 순풍이 돼요.` : `${ki}の気が強い日・場所・人が追い風になるんダよ。`)}</p>
                               </div>
                             </div>
                             {/* 忌神 */}
@@ -4897,7 +4924,7 @@ function FortuneResult() {
                                     </div>
                                   ))}
                                 </div>
-                                <p style={{ fontSize:12, color:C.textMuted, lineHeight:1.9, whiteSpace:'pre-line' }}>{kjDesc || `${kj}の気が強い日は消耗しやすいんダ。`}</p>
+                                <p style={{ fontSize:12, color:C.textMuted, lineHeight:1.9, whiteSpace:'pre-line' }}>{kjDesc || (_kkLang==='kr' ? `${kj}의 기가 강한 날은 소모되기 쉬워요.` : `${kj}の気が強い日は消耗しやすいんダ。`)}</p>
                               </div>
                             </div>
                           </div>
@@ -4912,23 +4939,16 @@ function FortuneResult() {
                   <p style={{ fontSize:11, color:C.textMuted, letterSpacing:"0.15em", marginBottom:12 }}>特殊星（持って生まれた星）</p>
                   {M.tokuseiboshi && M.tokuseiboshi.length > 0 ? (
                     <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                      {M.tokuseiboshi.map((s,i) => {
-                        const STAR_DESC = {
-                          '天乙貴人':'困ったときに必ず助けてくれる人が現れる「救いの星」。人脈・縁に恵まれやすいんダ。',
-                          '文昌星':'学習能力・文章力・知性を高める星。書く仕事・研究・教育系で才能が光るんダよ。',
-                          '紅艷星':'色気・魅力・人を惹きつける星。恋愛での影響力が強く、出会い運に恵まれやすいんダ。',
-                          '将星':'リーダーシップと統率力の星。組織や集団の中で自然とまとめ役になりやすいんダ。',
-                          '驛馬星':'移動・変化・旅の星。環境を変えることで運が開けるタイプンダよ。',
-                          '桃花星':'人を引きつける魅力の星。人気運・恋愛運に強く、芸能・接客系で輝きやすいんダ。',
-                          '劫殺星':'変化・決断力の星。大きな転換点で力を発揮するが、衝動的な行動には注意ンダよ。',
-                        };
-                        return (
+                      {(() => {
+                        const _starLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+                        const STAR_DESC = getStarDescByLang(_starLang);
+                        return M.tokuseiboshi.map((s,i) => (
                           <div key={i} style={{ display:"flex", gap:14, padding:"13px 16px", borderRadius:12, background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)" }}>
                             <span style={{ fontSize:11, padding:"3px 10px", height:"fit-content", border:`1px solid ${C.border}`, borderRadius:20, color:C.goldDim, whiteSpace:"nowrap", flexShrink:0 }}>✦ {s}</span>
-                            <p style={{ fontSize:12, color:C.textMuted, lineHeight:1.7 }}>{STAR_DESC[s]||`${s}を持っているんダ。この星の影響がある命式は、特定の場面で独自の力を発揮するんダよ。`}</p>
+                            <p style={{ fontSize:12, color:C.textMuted, lineHeight:1.7 }}>{STAR_DESC[s] || (_starLang==='kr' ? buildStarFallback_KR(s) : buildStarFallback_JA(s))}</p>
                           </div>
-                        );
-                      })}
+                        ));
+                      })()}
                     </div>
                   ) : (
                     <p style={{ fontSize:12, color:C.textMuted }}>今回の命式には特殊星は見当たらないんダ。特殊星がないことはごく普通のことで、基本の五行バランスがより純粋に現れやすい命式ンダよ🐼</p>
@@ -4937,14 +4957,8 @@ function FortuneResult() {
 
                 {/* 空亡（くうぼう）*/}
                 {M.kuubouType && (() => {
-                  const KUUBOU_DESC = {
-                    '戌亥空亡':'穏やかに見えて独自の価値観とカリスマ性を持つんダ。行動前に熟考し計画を立てるタイプで、カリスマ性が周りを引き寄せるんダよ🐼',
-                    '申酉空亡':'社交的で向上心が高く働き者んダ。自己肯定感が高く周りの雰囲気を良くするタイプで、事業を発展させるなど成功しやすいんダよ🐼',
-                    '午未空亡':'頭の回転が速く臨機応変な対応が得意んダ。プライドが高く内面はとてもデリケートなタイプで、クールな外見の奥に繊細な感性があるんダよ🐼',
-                    '辰巳空亡':'常に刺激を求めマンネリを嫌うんダ。表面はパワフルに見えるが計画性も持ち合わせているタイプで、変化の中で才能が開花するんダよ🐼',
-                    '寅卯空亡':'前進するエネルギーが強く何事にも一途んダ。行動力があるが詰めが甘い面も。目上の人にかわいがられ、30代から運気が大きく上がっていくんダよ🐼',
-                    '子丑空亡':'誠実で常識的な努力家んダ。争いごとが嫌いで若い頃は苦労しやすいが、晩年に運気が大きく上昇するタイプんダよ🐼',
-                  };
+                  const _kbLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+                  const KUUBOU_DESC = getKuubouDescByLang(_kbLang);
                   const desc = KUUBOU_DESC[M.kuubouType] || '';
                   return (
                     <div style={{ marginTop:24 }}>
@@ -5011,18 +5025,8 @@ function FortuneResult() {
                     return '比肩';
                   }
                   const dayKan = pillars.day.kan;
-                  const TSUHEN_INFO = {
-                    '比肩': { icon:'◈', color:'rgba(180,180,120,0.8)', bg:'rgba(180,180,80,0.08)', bd:'rgba(180,180,80,0.2)',  short:'自立・競争心',  detail:'独立心が強く、自分の力で切り開くタイプ。ライバルや兄弟姉妹との縁が深い。' },
-                    '劫財': { icon:'◇', color:'rgba(200,160,80,0.9)',  bg:'rgba(200,160,80,0.08)', bd:'rgba(200,160,80,0.22)', short:'競争・浪費',    detail:'勝負強さと同時に散財・損失の気も。仲間を引き込む力があるが裏切りにも注意。' },
-                    '食神': { icon:'✦', color:'rgba(120,200,120,0.9)', bg:'rgba(100,180,100,0.07)',bd:'rgba(100,180,100,0.2)',  short:'才能・楽しむ',  detail:'芸術・グルメ・話術など自己表現が豊か。子供・部下・創作物に縁が深い。' },
-                    '傷官': { icon:'✧', color:'rgba(100,220,160,0.9)', bg:'rgba(80,200,140,0.07)', bd:'rgba(80,200,140,0.2)',  short:'表現・反骨心', detail:'圧倒的な才能と個性。型にはまらない独自の道を切り開く力がある。上司・権威への反発も。' },
-                    '偏財': { icon:'◆', color:'rgba(200,200,80,0.9)',  bg:'rgba(200,190,60,0.08)', bd:'rgba(200,190,60,0.2)',  short:'財運・行動力', detail:'稼ぐ力と異性への積極性。動いてお金を引き寄せるタイプだが管理が課題。父親との縁も。' },
-                    '正財': { icon:'◉', color:'rgba(220,190,80,0.9)',  bg:'rgba(220,190,80,0.08)', bd:'rgba(220,190,80,0.22)', short:'蓄財・着実',   detail:'地道な努力で財を積み上げる。誠実で堅実。配偶者（男性の場合）との縁にも表れる。' },
-                    '偏官': { icon:'▲', color:'rgba(180,100,200,0.9)', bg:'rgba(160,80,200,0.08)', bd:'rgba(160,80,200,0.2)',  short:'地位・重圧',  detail:'強いプレッシャーに揉まれて実力を発揮するタイプ。軍・警察・競争の激しい仕事に縁。' },
-                    '正官': { icon:'△', color:'rgba(140,160,220,0.9)', bg:'rgba(120,140,210,0.08)',bd:'rgba(120,140,210,0.2)', short:'名誉・秩序',   detail:'社会的評価・地位・正しさを重んじる。上司・会社に恵まれやすい。ルールを守る誠実さ。' },
-                    '偏印': { icon:'◎', color:'rgba(100,180,220,0.9)', bg:'rgba(80,160,210,0.07)', bd:'rgba(80,160,210,0.2)',  short:'直感・サポーター', detail:'直感と学習能力が高い。型破りな発想。母親・恩師・異質なサポーターとの縁。' },
-                    '正印': { icon:'○', color:'rgba(120,200,240,0.9)', bg:'rgba(100,180,230,0.07)',bd:'rgba(100,180,230,0.2)', short:'学問・保護',   detail:'知識・文化・学習に縁が深い。母親・目上の人に守られやすい。資格・学位との縁も。' },
-                  };
+                  const _tsLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+                  const TSUHEN_INFO = getTsuhenInfoByLang(_tsLang);
                   // 各柱の通変星を算出
                   const pillarRows = [
                     { label:'年柱', kan:pillars.year.kan,  shi:pillars.year.shi,  pillarKey:'year' },
@@ -5069,16 +5073,16 @@ function FortuneResult() {
                         const dayGogyo = JIKKAN_G2[JIKKAN_L2.indexOf(dayKan)] || '水';
                         // 同点の星をまとめる
                         const tieStars = sortedTs.filter(([,c]) => c === sortedTs[2]?.[1] && c <= 1);
-                        const tieNote = tieStars.length >= 3
-                          ? ` また${tieStars.map(([n]) => `「${(TSUHEN_INFO[n]||{}).icon||''}${n}」`).join('・')}も同点で命式に存在しているンダ。`
-                          : sortedTs.slice(2, 5).length > 0
-                            ? ` ほかに${sortedTs.slice(2,5).map(([n])=>`「${(TSUHEN_INFO[n]||{}).icon||''}${n}」`).join('・')}も命式に出ているンダ。`
-                            : '';
-                        return `命式の通変星を全部読み解いたんダよ🐼` +
-                               ` 一番強く出ているのは「${info1.icon||''}${top}」（×${topCnt.toFixed(1).replace('.0','')}）で、${info1.detail || ''}` +
-                               (top2 ? ` 次に「${info2.icon||''}${top2}」（×${top2Cnt.toFixed(1).replace('.0','')}）で、${info2.detail || ''}` : '') +
-                               tieNote +
-                               ` 日主「${dayKan}（${dayGogyo}）」との関係でこのパターンが生まれているんダ。この組み合わせが、あなたの人生の流れの土台になっているんダよ🐼`;
+                        const _tsrLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+                        const _quote = (n) => _tsrLang==='kr' ? `"${(TSUHEN_INFO[n]||{}).icon||''}${n}"` : `「${(TSUHEN_INFO[n]||{}).icon||''}${n}」`;
+                        const tieStarsParts = tieStars.length >= 3 ? tieStars.map(([n]) => _quote(n)) : [];
+                        const otherStarsParts = (tieStars.length < 3) ? sortedTs.slice(2,5).map(([n]) => _quote(n)) : [];
+                        return langPick(AT.buildTsuhenseiReading_JA, AT.buildTsuhenseiReading_KR, {
+                          top, top2, topCnt, top2Cnt,
+                          info1Icon: info1.icon, info2Icon: info2.icon,
+                          info1Detail: info1.detail || '', info2Detail: info2.detail || '',
+                          tieStarsParts, otherStarsParts, dayKan, dayGogyo,
+                        });
                       })()}/>
 
                       {/* 上段：柱カード＋ランキング 横並び */}
@@ -5206,21 +5210,8 @@ function FortuneResult() {
                   if (!calc) return null;
                   const pillars = calc.pillars;
                   const dayKan = pillars.day.kan;
-                  const JUNIU_INFO = {
-                    '長生': { energy:8,  color:'rgba(100,200,120,0.9)', bar:'rgba(100,200,120,0.7)', desc:'才能が芽吹き始める時期。新しいことへの感受性が高く、成長の可能性に満ちている。' },
-                    '沐浴': { energy:4,  color:'rgba(150,200,180,0.8)', bar:'rgba(150,200,180,0.5)', desc:'感受性が極めて高く多感なフェーズ。芸術的才能・色気・変化の多い人生を示す。' },
-                    '冠帯': { energy:7,  color:'rgba(120,190,100,0.9)', bar:'rgba(120,190,100,0.6)', desc:'才能が形になり始める成長期。社会デビューや新しい役割に縁がある。' },
-                    '建禄': { energy:9,  color:'rgba(80,200,100,0.9)',  bar:'rgba(80,200,100,0.75)', desc:'エネルギーが充実した実力発揮の時期。自立心が強く、仕事で力を発揮できる。' },
-                    '帝旺': { energy:10, color:'rgba(200,168,60,0.95)', bar:'rgba(200,168,60,0.85)', desc:'最もエネルギーが強い全盛期。カリスマ性・主体性・存在感が際立つ。' },
-                    '衰':   { energy:6,  color:'rgba(180,160,80,0.8)',  bar:'rgba(180,160,80,0.55)', desc:'エネルギーを保ちながら次を見据える時期。経験を活かした堅実な動き方が吉。' },
-                    '病':   { energy:3,  color:'rgba(160,130,100,0.8)', bar:'rgba(160,130,100,0.4)', desc:'内省が深まり繊細さが増すフェーズ。直感力・芸術性が上がるが体調管理が大切。' },
-                    '死':   { energy:2,  color:'rgba(140,120,160,0.8)', bar:'rgba(140,120,160,0.35)',desc:'古いものを手放して次の準備をする転換期。変革・再生のエネルギーが宿る。' },
-                    '墓':   { energy:5,  color:'rgba(120,100,180,0.8)', bar:'rgba(120,100,180,0.5)', desc:'内に秘めた力が蓄積される時期。表には出ないが、底力と深みが増していく。' },
-                    '絶':   { energy:1,  color:'rgba(160,100,140,0.8)', bar:'rgba(160,100,140,0.3)', desc:'新しいサイクルの始まる転換点。過去を断ち切って新境地へ向かうエネルギー。' },
-                    '胎':   { energy:3,  color:'rgba(180,120,120,0.8)', bar:'rgba(180,120,120,0.35)',desc:'可能性が宿り始める段階。新しい才能・縁・プロジェクトの種が芽生える時期。' },
-                    '養':   { energy:5,  color:'rgba(160,140,100,0.8)', bar:'rgba(160,140,100,0.45)',desc:'育まれ守られる時期。環境・人・組織に支えられながら力を蓄えるフェーズ。' },
-                    '不明': { energy:0,  color:C.textMuted, bar:'rgba(100,100,100,0.3)', desc:'─' },
-                  };
+                  const _juniuLang1 = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+                  const JUNIU_INFO = getJuniuInfoShort(_juniuLang1, C.textMuted);
                   const pillarList = [
                     { label:'年柱', key:'year',  note:'先祖・幼少期・社会的背景' },
                     { label:'月柱', key:'month', note:'仕事・社会・親との関係' },
@@ -5239,9 +5230,11 @@ function FortuneResult() {
                         const JIKKAN_G2 = ['木','木','火','火','土','土','金','金','水','水'];
                         const JIKKAN_L2 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
                         const dayGogyo = JIKKAN_G2[JIKKAN_L2.indexOf(dayKan)] || '水';
-                        return `十二運星で命式を読み解いたんダよ🐼 日柱（あなた自身）は「${dayUnsei}」ンダ。${infoD.desc || ''}` +
-                               ` 月柱（社会・仕事）は「${moUnsei}」で、${infoM.desc || ''}` +
-                               ` 日主「${dayKan}（${dayGogyo}）」と組み合わせると、${infoD.energy >= 8 ? 'エネルギーが強く自分の力で道を切り開けるタイプ' : infoD.energy >= 5 ? '内に力を蓄えながら着実に進んでいくタイプ' : '変化や転換を経て深みを増していくタイプ'}ンダよ🐼`;
+                        return langPick(
+                          AT.buildJuniunseiReading_JA,
+                          AT.buildJuniunseiReading_KR,
+                          dayUnsei, infoD.desc || '', moUnsei, infoM.desc || '', dayKan, dayGogyo, infoD.energy || 0
+                        );
                       })()}/>
 
                       {/* 十二運星カード */}
@@ -5364,21 +5357,14 @@ function FortuneResult() {
                   const score = loveScore;
                   const DL = _dayLabel;
 
-                  if(sgH && score >= 75) return `${DL}「${todayS.kanshi}」は、あなたの命式にとって特別な日ンダ。日支の支合が成立しているから、配偶者宮——つまり「縁を引き寄せる扉」が開いている状態なんダよ。運命的な出会いとか、ずっと言えなかった気持ちを伝えるとか、そういう動きが今日は命式に後押しされているんダ。「なんとなく今日じゃなくていいか」って思う気持ちがあっても、今日動いた方がいいんダよ。後回しにしてきたことを、今日一つだけ動かしてみてほしいんダ🐼`;
-
-                  if(js==='正官' && score >= 70) return `「${todayS.kanshi}」${DL}は「正官」の星が立っているんダ。正官は地位・誠実さ・真剣な縁を表す星で、恋愛でいうと「本物の縁が動く」日なんダよ。軽い出会いより、長く続くような深い関係が結ばれやすい。${DL}出会った人や、${DL}深まった関係は、あとから振り返ったとき「あの日が転機だった」と思うような意味を持つことが多いんダよ。真剣な気持ちがあるなら、${DL}それを行動に変えてみてほしいんダ🐼`;
-
-                  if((js==='食神'||js==='傷官') && score >= 65) return `${DL}「${todayS.kanshi}」日は「${js}」の星が立っていて、あなたの感性や表現力が自然に輝く日ンダ。恋愛は技術じゃなくて「その人らしさ」で動くんダよ。${DL}は無理に計算しなくていい。ただ素直に、感じたことを言葉や態度で出してみてほしいんダ。あなたの「ありのまま」が一番の武器になる日なんダよ。気になる相手がいるなら、今日の自分を見せてみてほしいんダ🐼`;
-
-                  if(js==='偏財' && score >= 65) return `「${todayS.kanshi}」${DL}は「偏財」の星ンダ。偏財は行動力と異性縁を同時に持つ星で、待っていても縁は来なくて、動いた人に縁が引き寄せられる日なんダよ。気になる相手への連絡、新しい場所への外出、普段と違う行動——${DL}は「動いたもの勝ち」の日ンダ。好奇心のままに動いてみてほしいんダよ🐼`;
-
-                  if(rkH) return `${DL}「${todayS.kanshi}」日は、あなたの日支と六冲の関係にあるんダ。六冲というのは「エネルギーが真正面からぶつかる」状態で、感情が揺れやすく、言葉が意図と違う方向に伝わってしまうことがあるんダよ。大事な告白や、感情的になりそうな話し合いは${DL}じゃない方がいいんダ。${DL}は相手の言葉を真に受けすぎず、自分の気持ちをいったん落ち着かせることに使ってほしいんダよ🐼`;
-
-                  if(score >= 75) return `「${todayS.kanshi}」${DL}は恋愛運が高めの日ンダ。${kiH?`喜神「${ki}」の流れが天干に乗っていて、命式全体に追い風が吹いているんダよ。`:''}恋愛は「タイミング」で動くことがとても多いんダ。${DL}は命式がそのタイミングをくれているから、気になっていること・気になっている相手に対して、一歩踏み出してほしいんダよ🐼`;
-
-                  if(score >= 60) return `「${todayS.kanshi}」${DL}の恋愛運は穏やかな流れンダ。大きな動きより、今ある関係を丁寧に育てることに向いている日なんだよ。好きな人がいるなら、派手なアクションより「相手が嬉しいと思う小さなこと」を一つやってみてほしいんダ。そういう積み重ねが、長い目で見たとき本物の縁を育てていくんだよ🐼`;
-
-                  return `${DL}「${todayS.kanshi}」日は、命式的に恋愛への後押しが弱い日ンダ。これは「縁がない」ということじゃなくて、「${DL}は自分のエネルギーを恋愛に使う日じゃない」ということなんダよ。好きな人のことを考える時間より、自分を磨くことや、自分が楽しいと思えることに使った方が、結果的に魅力が上がって縁も引き寄せられるんダ。焦らなくていいんダよ🐼`;
+                  if(sgH && score >= 75) return langPick(AT.buildLoveShigouDay_JA, AT.buildLoveShigouDay_KR, DL, todayS.kanshi);
+                  if(js==='正官' && score >= 70) return langPick(AT.buildLoveSeikanDay_JA, AT.buildLoveSeikanDay_KR, todayS.kanshi, DL);
+                  if((js==='食神'||js==='傷官') && score >= 65) return langPick(AT.buildLoveShokujinDay_JA, AT.buildLoveShokujinDay_KR, DL, todayS.kanshi, js);
+                  if(js==='偏財' && score >= 65) return langPick(AT.buildLoveHenzaiDay_JA, AT.buildLoveHenzaiDay_KR, todayS.kanshi, DL);
+                  if(rkH) return langPick(AT.buildLoveRokuchuuDay_JA, AT.buildLoveRokuchuuDay_KR, DL, todayS.kanshi);
+                  if(score >= 75) return langPick(AT.buildLoveHighScoreDay_JA, AT.buildLoveHighScoreDay_KR, todayS.kanshi, DL, kiH, ki);
+                  if(score >= 60) return langPick(AT.buildLoveMidScoreDay_JA, AT.buildLoveMidScoreDay_KR, todayS.kanshi, DL);
+                  return langPick(AT.buildLoveLowScoreDay_JA, AT.buildLoveLowScoreDay_KR, DL, todayS.kanshi);
                 })()} />
               </Card>
 
@@ -5424,23 +5410,15 @@ function FortuneResult() {
                   const score = workScore;
                   const DL = _dayLabel;
 
-                  if(js==='正官') return `「${todayS.kanshi}」${DL}は「正官」の星が立っているんダ。正官というのは、地位・評価・信頼という、仕事の核心に関わる星なんダよ。${DL}は「ちゃんとやっている人がちゃんと見てもらえる」日ンダ。先送りにしていた報告や提案、上の人への連絡——${DL}動いたことは、いつも以上にきちんと届くんダよ。評価が気になっていたなら、${DL}一歩出てみてほしいんダ🐼`;
-
-                  if(js==='食神') return `${DL}「${todayS.kanshi}」日は「食神」の日ンダ。食神は才能・表現・創造性を司る星で、仕事でいうと「自分の得意が一番輝く日」なんダよ。マニュアル通りに動くより、自分なりの工夫やアイデアを出した方がずっといい結果になる。${DL}は「正解」を探すより「自分らしい答え」を出す日ンダよ。眠っているアイデアがあるなら、${DL}それを形にしてみてほしいんダ🐼`;
-
-                  if(js==='傷官') return `「${todayS.kanshi}」${DL}は「傷官」の星ンダ。傷官は天才性と反骨心を持つ星で、${DL}は常識や既存のやり方に疑問を感じやすい日なんだよ。それは弱点じゃなくてあなたの才能が目覚めているサインンダ。ただ上の人への言い方には気をつけて——${DL}は「伝え方」に少しだけ丁寧さを足すと、あなたの才能が正しく伝わるんダよ🐼`;
-
-                  if(js==='偏官') return `「${todayS.kanshi}」${DL}は「偏官」の星ンダ。偏官は行動力・突破力・プレッシャー耐性に関わる星で、${DL}は「攻める」動きに向いている日なんダよ。難しそうだと思っていた仕事、少し高い目標——${DL}はそういうものに手を伸ばすといい。ただ、体力と集中力の消費が激しい日でもあるから、無理し過ぎず、やりきったら早めに休んでほしいんダよ🐼`;
-
-                  if(js==='偏印'||js==='正印') return `${DL}「${todayS.kanshi}」日は「${js}」の星ンダ。印星は学習・知識・内省に関わる星で、${DL}は「インプットの日」と思うといいんだよ。人から学ぶ、本を読む、考えをまとめる——アウトプットより情報を取り込むことに向いている日ンダ。${DL}吸収したことが、あとで大きな仕事のアイデアに変わることがあるんダよ🐼`;
-
-                  if(js==='劫財') return `${DL}「${todayS.kanshi}」日は「劫財」の星が立っているんダ。劫財は競争や横取り、思わぬ妨害が起きやすい星なんダよ。大切な交渉・重要な契約・感情的になりそうな話し合いは、${DL}じゃない方がいいんダ。${DL}は自分のペースをしっかり守って、周りの雑音に振り回されないように動くといいんダよ🐼`;
-
-                  if(score >= 78) return `「${todayS.kanshi}」${DL}は仕事運が高めの日ンダ。${kiH?`喜神「${ki}」の流れが来ていて、あなたの命式に追い風が吹いているんダよ。`:''}こういう日は「やろうかどうか迷っていること」を動かすのに最適なんダ。迷っていた連絡、腰が重かった提案——${DL}一つ動かしてみてほしいんダよ。思っていたより物事がスムーズに進むことが多い日ンダ🐼`;
-
-                  if(score >= 62) return `「${todayS.kanshi}」${DL}の仕事運は穏やかな流れンダ。大きな動きより、今やるべきことを丁寧にこなすことに集中する日なんダよ。${DL}コツコツやった積み上げが、あとで「あのとき頑張っていてよかった」と思える土台になっていくんダ。地味でも着実に、今日を大切に使ってほしいんダよ🐼`;
-
-                  return `${DL}「${todayS.kanshi}」日は、命式的に仕事への追い風が少ない日ンダ。焦って動いても空回りしやすいから、${DL}は「攻める日」ではなく「整える日」として使うといいんだよ。デスクの整理、タスクの整理、気になっていた小さなことの後始末——そういうことに使うと、次に追い風が来たとき一番うまく動けるんダよ🐼`;
+                  if(js==='正官') return langPick(AT.buildWorkSeikanDay_JA, AT.buildWorkSeikanDay_KR, todayS.kanshi, DL);
+                  if(js==='食神') return langPick(AT.buildWorkShokujinDay_JA, AT.buildWorkShokujinDay_KR, DL, todayS.kanshi);
+                  if(js==='傷官') return langPick(AT.buildWorkShougoanDay_JA, AT.buildWorkShougoanDay_KR, todayS.kanshi, DL);
+                  if(js==='偏官') return langPick(AT.buildWorkHenkanDay_JA, AT.buildWorkHenkanDay_KR, todayS.kanshi, DL);
+                  if(js==='偏印'||js==='正印') return langPick(AT.buildWorkInDay_JA, AT.buildWorkInDay_KR, DL, todayS.kanshi, js);
+                  if(js==='劫財') return langPick(AT.buildWorkGouzaiDay_JA, AT.buildWorkGouzaiDay_KR, DL, todayS.kanshi);
+                  if(score >= 78) return langPick(AT.buildWorkHighScoreDay_JA, AT.buildWorkHighScoreDay_KR, todayS.kanshi, DL, kiH, ki);
+                  if(score >= 62) return langPick(AT.buildWorkMidScoreDay_JA, AT.buildWorkMidScoreDay_KR, todayS.kanshi, DL);
+                  return langPick(AT.buildWorkLowScoreDay_JA, AT.buildWorkLowScoreDay_KR, DL, todayS.kanshi);
                 })()} />
               </Card>
             </div>
@@ -5485,23 +5463,15 @@ function FortuneResult() {
                   const score = moneyScore;
                   const DL = _dayLabel;
 
-                  if(js==='偏財') return `「${todayS.kanshi}」${DL}は「偏財」の星が立っているんダ。偏財は「動いた人にお金がついてくる」星なんだよ。コツコツ型じゃなくて、チャンスをつかんで大きく動くことで金運が開くタイプの日ンダ。思わぬところからお金が動いたり、財に関わるいい縁が舞い込むこともあるんだよ。${DL}は「面白そう」「やってみたい」という直感を大切にして動いてほしいんダ。ただし、勢いに乗りすぎて後から後悔するような出費だけは注意ンダよ💰🐼`;
-
-                  if(js==='正財') return `「${todayS.kanshi}」${DL}は「正財」の星ンダ。正財はコツコツ積み上げた努力がお金という形で返ってくる星なんだよ。${DL}は「地味だけど確実な行動」が一番金運に直結する日ンダ。丁寧な仕事・約束をきちんと守ること・小さな信頼の積み重ね——そういうことが${DL}は直接お金の流れを引き寄せるんダよ。派手な動きより、誠実な積み上げを選んでほしいんダ🐼`;
-
-                  if(js==='食神') return `「${todayS.kanshi}」${DL}は「食神」の星ンダ。食神は才能・表現・創造性から財が生まれる星なんだよ。${DL}は「好きなことをやること」「得意なことを発揮すること」が、そのまま金運アップにつながっていくんダ。義務感でやる仕事より、楽しんでやる仕事の方が今日は実入りが良くなりやすいんだよ。あなたが「これは自分の得意だな」と思えることを、${DL}は一つ全力でやってみてほしいんダ🐼`;
-
-                  if(js==='劫財') return `「${todayS.kanshi}」${DL}は「劫財」の星が立っているんダ。劫財は散財・横取り・思わぬ出費が起きやすい星で、今日は金運的に守りの日なんダよ。衝動買い、勢いでの出費、よく考えていない投資——こういうものは${DL}じゃなくていいんダ。財布の紐をしっかり締めて、「${DL}は使わない日」と決めておくだけで、金運の流れが変わってくるんだよ🐼`;
-
-                  if(js==='比肩') return `「${todayS.kanshi}」${DL}は「比肩」の星ンダ。比肩は独立心と競争を表す星で、金運的には「財が散りやすい」日なんダよ。人への奢りや見栄のための出費、競争心からの浪費——こういうことが起きやすいから気をつけてほしいんダ。${DL}は自分のためにお金を使うより、将来のために貯めることを意識した方がいい日ンダよ🐼`;
-
-                  if(js==='偏官') return `「${todayS.kanshi}」${DL}は「偏官」の星ンダ。偏官はプレッシャーと出費が重なりやすい星なんだよ。急な出費や、立場上断れない支払いが発生しやすい日ンダ。それ自体は仕方ないんだけど、${DL}は余分な出費をなるべく控えて、財布に余裕を持っておくといいんダよ🐼`;
-
-                  if(score >= 78) return `「${todayS.kanshi}」${DL}は金運の流れがいい日ンダ。${kiH?`喜神「${ki}」の気が天干に乗っていて、命式に追い風が来ているんダよ。`:''}こういう日はお金に関わる行動を少し積極的にしてみていいんダ。気になっていた投資の下調べ、副収入になりそうなことへの一歩、普段より少しだけ広い視野でお金を動かしてみてほしいんダよ🐼`;
-
-                  if(score >= 62) return `「${todayS.kanshi}」${DL}の金運は穏やかな流れンダ。大きく動かすより、今あるお金と向き合う日にするといいんだよ。家計の見直し、使っているサービスの整理、将来のための小さな貯め——地味だけど、こういうことをやった日の積み重ねが、あとから大きな安心になっていくんダよ🐼`;
-
-                  return `「${todayS.kanshi}」${DL}は、命式的に金運への後押しが少ない日ンダ。焦ってお金を動かしても空回りしやすいから、今日は「守る日」と決めてほしいんダよ。高額の買い物や重要な金銭の判断、新しい投資——こういうことは別の日に持ち越すのが賢いんダ。今日は計画を立てる・情報を集める・将来への準備をする日として使ってほしいんダよ🐼`;
+                  if(js==='偏財') return langPick(AT.buildMoneyHenzaiDay_JA, AT.buildMoneyHenzaiDay_KR, todayS.kanshi, DL);
+                  if(js==='正財') return langPick(AT.buildMoneySeizaiDay_JA, AT.buildMoneySeizaiDay_KR, todayS.kanshi, DL);
+                  if(js==='食神') return langPick(AT.buildMoneyShokujinDay_JA, AT.buildMoneyShokujinDay_KR, todayS.kanshi, DL);
+                  if(js==='劫財') return langPick(AT.buildMoneyGouzaiDay_JA, AT.buildMoneyGouzaiDay_KR, todayS.kanshi, DL);
+                  if(js==='比肩') return langPick(AT.buildMoneyHikenDay_JA, AT.buildMoneyHikenDay_KR, todayS.kanshi, DL);
+                  if(js==='偏官') return langPick(AT.buildMoneyHenkanDay_JA, AT.buildMoneyHenkanDay_KR, todayS.kanshi, DL);
+                  if(score >= 78) return langPick(AT.buildMoneyHighScoreDay_JA, AT.buildMoneyHighScoreDay_KR, todayS.kanshi, DL, kiH, ki);
+                  if(score >= 62) return langPick(AT.buildMoneyMidScoreDay_JA, AT.buildMoneyMidScoreDay_KR, todayS.kanshi, DL);
+                  return langPick(AT.buildMoneyLowScoreDay_JA, AT.buildMoneyLowScoreDay_KR, todayS.kanshi, DL);
                 })()} />
               </Card>
             </div>
@@ -5526,7 +5496,7 @@ function FortuneResult() {
               <Card>
                 <SectionLabel en="CURRENT PHASE · 今のフェーズ" ja="今の大運・流年 十二運星" />
                 <div style={{ marginBottom:16, padding:"10px 14px", background:"rgba(255,255,255,0.02)", borderRadius:10, border:"1px solid rgba(255,255,255,0.05)", fontSize:12, color:C.textMuted, lineHeight:1.8 }}>
-                  📖 <span style={{ color:C.textSub }}>今のフェーズ：</span>命式の十二運星は生涯固定ですが、10年ごとの大運・毎年の流年にも十二運星が当たります。今あなたがどのエネルギーフェーズにいるかを示しているんダよ。
+                  📖 <span style={{ color:C.textSub }}>{tt('今のフェーズ：')}</span>{tt('命式の十二運星は生涯固定ですが、10年ごとの大運・毎年の流年にも十二運星が当たります。今あなたがどのエネルギーフェーズにいるかを示しているんダよ。')}
                 </div>
                 {(() => {
                   const calc = M._calc;
@@ -5546,22 +5516,8 @@ function FortuneResult() {
                   const duUnsei   = du && duShiIdx >= 0 ? _getJuniunsei(dayKan, duShiIdx) : '─';
                   const yrShiIdx  = JUNISHI_L.indexOf(yearShi);
                   const yrUnsei   = yrShiIdx >= 0 ? _getJuniunsei(dayKan, yrShiIdx) : '─';
-                  const JUNIU_INFO = {
-                    '長生':{ energy:8,  color:'rgba(100,200,120,0.9)', bar:'rgba(100,200,120,0.7)', icon:'🌱', phase:'成長期', desc:'才能が芽吹き、感受性が高まっている時期。新しいことを始めるのに最適ンダ。' },
-                    '沐浴':{ energy:4,  color:'rgba(150,200,180,0.8)', bar:'rgba(150,200,180,0.5)', icon:'🌊', phase:'感受期', desc:'感受性が極めて高く多感な時期。感情の波に乗りやすく、恋愛や芸術が活発になるんダ。' },
-                    '冠帯':{ energy:7,  color:'rgba(120,190,100,0.9)', bar:'rgba(120,190,100,0.6)', icon:'🎓', phase:'開花期', desc:'才能が形になり始める時期。周囲から認められる機会が増えてくるんダよ。' },
-                    '建禄':{ energy:9,  color:'rgba(80,200,100,0.9)',  bar:'rgba(80,200,100,0.75)',icon:'💪', phase:'充実期', desc:'エネルギーが充実した実力発揮の時期。独立・自立に向けて動くと結果が出やすいんダ。' },
-                    '帝旺':{ energy:10, color:'rgba(201,168,76,0.95)', bar:'rgba(201,168,76,0.85)',icon:'👑', phase:'全盛期', desc:'最もエネルギーが強い全盛期。カリスマ性が頂点に達し、主体的に動けば大きな成果が出るんダよ。' },
-                    '衰':  { energy:6,  color:'rgba(180,160,80,0.8)',  bar:'rgba(180,160,80,0.55)',icon:'🍂', phase:'成熟期', desc:'経験を活かして堅実に進む時期。派手な動きより着実な積み上げが吉ンダ。' },
-                    '病':  { energy:3,  color:'rgba(160,130,100,0.8)', bar:'rgba(160,130,100,0.4)',icon:'🌙', phase:'内省期', desc:'内省が深まる繊細な時期。無理せず、体調と心を整えることが最優先ンダよ。' },
-                    '死':  { energy:2,  color:'rgba(140,120,160,0.8)', bar:'rgba(140,120,160,0.35)',icon:'🍃', phase:'転換期', desc:'古いものを手放して次のサイクルへ向かう時期。手放すことで新しい縁が入ってくるんダ。' },
-                    '墓':  { energy:5,  color:'rgba(120,100,180,0.8)', bar:'rgba(120,100,180,0.5)', icon:'🌰', phase:'蓄積期', desc:'表には出ないが、内側に力が蓄積されている時期。焦らず、種をまき続けるんダよ。' },
-                    '絶':  { energy:1,  color:'rgba(160,100,140,0.8)', bar:'rgba(160,100,140,0.3)', icon:'🌫️', phase:'転換点', desc:'新サイクルが始まる転換点。今までの流れが変わり、新しい方向性が見え始めるんダ。' },
-                    '胎':  { energy:3,  color:'rgba(180,120,120,0.8)', bar:'rgba(180,120,120,0.35)',icon:'🥚', phase:'宿り期', desc:'新しい可能性が宿り始める時期。まだ見えないが、着実に次のエネルギーが育っているんダよ。' },
-                    '養':  { energy:5,  color:'rgba(160,140,100,0.8)', bar:'rgba(160,140,100,0.45)',icon:'🌿', phase:'養成期', desc:'育まれ守られる時期。無理に動かず、環境や人に甘えながら力を蓄えるのが正解ンダ。' },
-                    '─':   { energy:0,  color:C.textMuted, bar:'rgba(100,100,100,0.3)', icon:'─', phase:'─', desc:'─' },
-                    '不明': { energy:0, color:C.textMuted, bar:'rgba(100,100,100,0.3)', icon:'？', phase:'─', desc:'─' },
-                  };
+                  const _juniuLang2 = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+                  const JUNIU_INFO = getJuniuInfoFull(_juniuLang2, C.textMuted);
                   const duInfo = JUNIU_INFO[duUnsei] || JUNIU_INFO['不明'];
                   const yrInfo = JUNIU_INFO[yrUnsei] || JUNIU_INFO['不明'];
                   return (
@@ -5613,12 +5569,13 @@ function FortuneResult() {
                       <PopoSpeech text={(() => {
                         const JIKKAN_G2 = ['木','木','火','火','土','土','金','金','水','水'];
                         const dayGogyo = JIKKAN_G2[JIKKAN_L.indexOf(dayKan)] || '水';
-                        const duAge = du ? `${du.ageFrom}〜${du.ageTo}歳の大運` : '今の大運';
                         const samePhase = duUnsei === yrUnsei;
-                        return `今のあなたは「${duUnsei}（${duInfo.phase}）」の大運と「${yrUnsei}（${yrInfo.phase}）」の流年が重なっているんダよ🐼` +
-                          ` ${duInfo.desc}` +
-                          (samePhase ? ` 大運と流年が同じフェーズなので、このエネルギーが特に強く出ているんダ。` : ` 流年は「${yrInfo.desc}」`) +
-                          ` 日主「${dayKan}（${dayGogyo}）」にとって、今はどう動くべきかのヒントがここに隠れているんダよ🐼`;
+                        return langPick(
+                          AT.buildCurrentPhaseSpeech_JA,
+                          AT.buildCurrentPhaseSpeech_KR,
+                          duUnsei, duInfo.phase, yrUnsei, yrInfo.phase,
+                          duInfo.desc, yrInfo.desc, dayKan, dayGogyo, samePhase
+                        );
                       })()}/>
                     </>
                   );
@@ -5705,52 +5662,40 @@ function FortuneResult() {
                         const isKiDaiun = kiArr.includes(dKanG)||kiArr.includes(dShiG);
                         const isKjDaiun = kjArr.includes(dKanG)||kjArr.includes(dShiG);
                         const nG = nGogyo;
+                        const _duLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
 
                         // 大運の五行と自分の五行の関係
                         const kanRel  = (() => {
                           if(!dKanG||!nG) return '';
-                          if(SEI_D[dKanG]===nG) return `天干「${curDaiun.kan}（${dKanG}）」があなたの日主「${nG}」を生む相生の関係ンダ。`;
-                          if(KOKU_D[dKanG]===nG) return `天干「${curDaiun.kan}（${dKanG}）」があなたの日主「${nG}」を剋す相剋の関係ンダ。`;
-                          if(dKanG===nG) return `天干「${curDaiun.kan}（${dKanG}）」があなたの日主と同じ五行ンダ。`;
-                          return `天干「${curDaiun.kan}（${dKanG}）」の${dKanG}の気が流れる時期ンダ。`;
+                          let type = 'flow';
+                          if (SEI_D[dKanG]===nG) type = 'sei';
+                          else if (KOKU_D[dKanG]===nG) type = 'koku';
+                          else if (dKanG===nG) type = 'same';
+                          return langPick(AT.buildDaiunKanRel_JA, AT.buildDaiunKanRel_KR, curDaiun.kan, dKanG, nG, type);
                         })();
-                        const shiRel  = dShiG ? `地支「${curDaiun.shi}（${dShiG}）」の影響も加わるんダ。` : '';
+                        const shiRel  = dShiG ? langPick(AT.buildDaiunShiRel_JA, AT.buildDaiunShiRel_KR, curDaiun.shi, dShiG) : '';
 
                         // 特徴・仕事・恋愛・注意 を五行の関係から生成
-                        const feature = isKiDaiun
-                          ? `「${dKanG||dShiG}」の気があなたの喜神（${ki}）に一致する「喜神期」ンダ。実力が外に出やすく、行動したことが結果につながりやすい時期ンダよ。`
-                          : isKjDaiun
-                          ? `「${dKanG||dShiG}」の気があなたの忌神（${kj}）に一致する「忌神期」ンダ。慎重に動くことで消耗を防げるんダよ。`
-                          : `五行的には中立の時期ンダ。特別な追い風も逆風もないので、自分のペースで着実に動くのが吉ンダよ。`;
-
-                        const work = isKiDaiun
-                          ? '実績を積み上げるのに最適な時期ンダ。アイデアや提案が通りやすく、新しいことを始めるにも良い大運ンダよ。'
-                          : isKjDaiun
-                          ? '大きな賭けや転職など、リスクの高い動きは一段落してから行うのが吉ンダ。地道な積み上げを続けてほしいんダよ。'
-                          : '着実に積み上げることが重要な時期ンダ。焦らず自分の専門性を深めていくといい大運ンダよ。';
-
-                        const love = SEI_D[dKanG]===nG||SEI_D[dShiG]===nG
-                          ? '縁が深まりやすく、出会い・関係の進展に追い風の時期ンダ。積極的に動くといい結果が出やすいんダよ。'
-                          : KOKU_D[dKanG]===nG||KOKU_D[dShiG]===nG
-                          ? '感情の波が大きくなりやすい時期ンダ。焦らず、じっくりと相手を見極めることが大切ンダよ。'
-                          : '恋愛は安定した時期ンダ。日常の積み重ねを大切にすると、関係が深まっていくんダよ。';
-
-                        const caution = isKjDaiun
-                          ? `忌神（${kj}）が強まる時期なので、${kjArr.map(g=>KI_INFO_D[g]?.season).filter(Boolean).join('・')||'消耗しやすい時期'}は無理をしないことが特に大切ンダ。`
-                          : dShiG==='土' ? `地支「${curDaiun.shi}（土）」が含まれるため、土旺の時期（土用・年末年始）は体調管理に注意ンダ。`
-                          : '大きな問題はないが、大運の切り替わりの前後1〜2年はエネルギーの変化期。無理な行動は避けてほしいんダよ。';
+                        const feature = langPick(AT.buildDaiunFeature_JA, AT.buildDaiunFeature_KR, dKanG||dShiG, ki, kj, isKiDaiun, isKjDaiun);
+                        const work    = langPick(AT.buildDaiunWork_JA, AT.buildDaiunWork_KR, isKiDaiun, isKjDaiun);
+                        const isSeiOrShi  = SEI_D[dKanG]===nG||SEI_D[dShiG]===nG;
+                        const isKokuOrShi = KOKU_D[dKanG]===nG||KOKU_D[dShiG]===nG;
+                        const love    = langPick(AT.buildDaiunLove_JA, AT.buildDaiunLove_KR, isSeiOrShi, isKokuOrShi);
+                        const kjSeasons = kjArr.map(g=>KI_INFO_D[g]?.season).filter(Boolean).join('・');
+                        const caution = langPick(AT.buildDaiunCaution_JA, AT.buildDaiunCaution_KR, isKjDaiun, kj, kjSeasons, dShiG==='土', curDaiun.shi);
+                        const _lbl = _duLang === 'kr' ? AT.buildDaiunDetailLabels_KR() : { daiun:'大運', kankei:'関係', tokucho:'特徴', shigoto:'仕事', renai:'恋愛', chui:'注意', curHeader:(f,t)=>`現在の大運（${f}〜${t}歳）について` };
 
                         return (
                           <div style={{padding:"16px 18px",borderRadius:14,background:"rgba(201,168,76,0.06)",border:"1px solid rgba(201,168,76,0.2)",marginBottom:16}}>
-                            <p style={{fontSize:11,color:C.gold,letterSpacing:"0.1em",marginBottom:12,fontWeight:600}}>現在の大運（{curDaiun.ageFrom}〜{curDaiun.ageTo}歳）について</p>
+                            <p style={{fontSize:11,color:C.gold,letterSpacing:"0.1em",marginBottom:12,fontWeight:600}}>{_lbl.curHeader(curDaiun.ageFrom, curDaiun.ageTo)}</p>
                             <div style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:"10px 16px",fontSize:13}}>
                               {[
-                                {label:"大運", value:`${curDaiun.kan}${curDaiun.shi}（${curDaiun.kan}=${dKanG}・${curDaiun.shi}=${dShiG}）`},
-                                {label:"関係", value:kanRel+(shiRel?' '+shiRel:'')},
-                                {label:"特徴", value:feature},
-                                {label:"仕事", value:work},
-                                {label:"恋愛", value:love},
-                                {label:"注意", value:caution},
+                                {label:_lbl.daiun, value:`${curDaiun.kan}${curDaiun.shi}（${curDaiun.kan}=${dKanG}・${curDaiun.shi}=${dShiG}）`},
+                                {label:_lbl.kankei, value:kanRel+(shiRel?' '+shiRel:'')},
+                                {label:_lbl.tokucho, value:feature},
+                                {label:_lbl.shigoto, value:work},
+                                {label:_lbl.renai, value:love},
+                                {label:_lbl.chui, value:caution},
                               ].map((r,i)=>(
                                 <React.Fragment key={i}>
                                   <span style={{color:C.textMuted,fontSize:11,paddingTop:3,whiteSpace:"nowrap"}}>{r.label}</span>
@@ -5767,14 +5712,15 @@ function FortuneResult() {
 
                 <PopoSpeech
                   text={(() => {
+                    const _ppLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
                     const calc = M._calc;
-                    if(!calc || !M._ui) return 'あなたの大運の流れを読み解いているンダ🐼';
+                    if(!calc || !M._ui) return _ppLang==='kr' ? AT.buildDaiunFallback_KR() : 'あなたの大運の流れを読み解いているンダ🐼';
                     const currentAge = new Date().getFullYear() - (M._ui.year||1990);
                     const daiunFull  = calc.daiunList || [];
                     const curIdx     = daiunFull.findIndex(function(d){ return currentAge >= d.ageFrom && currentAge <= d.ageTo; });
                     const curD       = curIdx>=0 ? daiunFull[curIdx] : daiunFull[0];
                     const nextD      = daiunFull[curIdx+1];
-                    if(!curD) return 'あなたの大運を確認しているんダ🐼';
+                    if(!curD) return _ppLang==='kr' ? AT.buildDaiunCheckingFallback_KR() : 'あなたの大運を確認しているんダ🐼';
                     const kiArr  = (calc.kishin||[]);
                     const kjArr  = (calc.kijin||[]);
                     const ki = kiArr.join('・') || '不明';
@@ -5809,23 +5755,38 @@ function FortuneResult() {
 
                     let body = '';
                     if(isKi) {
-                      const boost = isSei ? 'あなたの日主「'+myG+'」がこの大運の五行に生かされる形で、特に力が引き出されやすい状態ンダ。' : isHiwa ? 'あなたの日主「'+myG+'」と同じ気が流れていて、自分らしさが最大限に発揮されやすい時代ンダ。' : 'あなたの命式にとって追い風の気が流れていて、動いた分だけ結果がついてくる時代ンダ。';
-                      body = '今の大運「'+cName+'（'+period+'）」は、あなたにとって命式的な追い風が吹いている時代ンダよ🌟' + NL + NL + 'この大運は「'+(WHAT[cKG]||cKG)+'」の気が流れていて、'+(SCENE[cKG]||cKG+'に関わること')+'がどんどん実りやすい状態ンダ。'+boost + NL + NL + '【今この時期にやるべきこと】' + NL + (DOACT[cKG]||'自分らしく動くこと') + NL + NL + 'こういう時期に動いた量が、人生の転換点になるんダよ🐼';
+                      if (_ppLang === 'kr') {
+                        body = AT.buildDaiunBodyKi_KR(cName, period, cKG, isSei, isHiwa, myG);
+                      } else {
+                        const boost = isSei ? 'あなたの日主「'+myG+'」がこの大運の五行に生かされる形で、特に力が引き出されやすい状態ンダ。' : isHiwa ? 'あなたの日主「'+myG+'」と同じ気が流れていて、自分らしさが最大限に発揮されやすい時代ンダ。' : 'あなたの命式にとって追い風の気が流れていて、動いた分だけ結果がついてくる時代ンダ。';
+                        body = '今の大運「'+cName+'（'+period+'）」は、あなたにとって命式的な追い風が吹いている時代ンダよ🌟' + NL + NL + 'この大運は「'+(WHAT[cKG]||cKG)+'」の気が流れていて、'+(SCENE[cKG]||cKG+'に関わること')+'がどんどん実りやすい状態ンダ。'+boost + NL + NL + '【今この時期にやるべきこと】' + NL + (DOACT[cKG]||'自分らしく動くこと') + NL + NL + 'こういう時期に動いた量が、人生の転換点になるんダよ🐼';
+                      }
                     } else if(isKj) {
-                      const myRelation = isKoku ? '「'+kj+'」の気があなたの「'+myG+'」と衝突する関係にあって' : 'あなたの命式が苦手とする「'+kj+'」の気が大運に流れていて';
-                      body = '今の大運「'+cName+'（'+period+'）」は、'+myRelation+'、エネルギーが消耗しやすい時期に入っているんダ🐼' + NL + NL + 'この大運には「'+(WHAT[cKG]||cKG)+'」の気が流れているんダけど、あなたの命式にとっては向かい風になる気なんだよ。無理に攻め続けると消耗するし、焦れば焦るほど結果が出にくくなる——そういう構造になっているんダ。' + NL + NL + '【なぜ慎重さが必要なのか】' + NL + (RISK[cKG]||'無理に動きすぎると後から大きな反動が来やすい') + 'んだよ。この時期に力でねじ伏せようとすると、後で大きな反動が来やすいんダ。' + NL + NL + '【土台を固めるとは具体的に何か】' + NL + (DOBASE[cKG]||'今できることを丁寧にこなすこと') + 'ンダよ。' + NL + NL + (KIDO[cKG]||'今の積み上げが次の大運で活きてくる') + 'んダ。';
+                      if (_ppLang === 'kr') {
+                        body = AT.buildDaiunBodyKj_KR(cName, period, cKG, kj, isKoku, myG);
+                      } else {
+                        const myRelation = isKoku ? '「'+kj+'」の気があなたの「'+myG+'」と衝突する関係にあって' : 'あなたの命式が苦手とする「'+kj+'」の気が大運に流れていて';
+                        body = '今の大運「'+cName+'（'+period+'）」は、'+myRelation+'、エネルギーが消耗しやすい時期に入っているんダ🐼' + NL + NL + 'この大運には「'+(WHAT[cKG]||cKG)+'」の気が流れているんダけど、あなたの命式にとっては向かい風になる気なんだよ。無理に攻め続けると消耗するし、焦れば焦るほど結果が出にくくなる——そういう構造になっているんダ。' + NL + NL + '【なぜ慎重さが必要なのか】' + NL + (RISK[cKG]||'無理に動きすぎると後から大きな反動が来やすい') + 'んだよ。この時期に力でねじ伏せようとすると、後で大きな反動が来やすいんダ。' + NL + NL + '【土台を固めるとは具体的に何か】' + NL + (DOBASE[cKG]||'今できることを丁寧にこなすこと') + 'ンダよ。' + NL + NL + (KIDO[cKG]||'今の積み上げが次の大運で活きてくる') + 'んダ。';
+                      }
                     } else {
-                      const neutralTone = isSei ? 'あなたの日主「'+myG+'」とは相生の関係にあって、静かに支えてくれるような流れンダ。' : isHiwa ? 'あなたの日主「'+myG+'」と同じ種類の気が流れていて、居心地はいいけど変化は少ない時代ンダ。' : '追い風でも逆風でもない、実力を積み上げるための静かな時期ンダ。';
-                      body = '今の大運「'+cName+'（'+period+'）」は、'+neutralTone + NL + NL + 'この大運には「'+(WHAT[cKG]||cKG)+'」の気が流れていて、目立った成果は出にくいかもしれないけど、'+(SCENE[cKG]||'地道な積み上げ')+'に取り組むことが後から大きな力になる時代なんダよ🐼' + NL + NL + '【この時期の正しい動き方】' + NL + (DOSLOW[cKG]||'コツコツ積み上げることに集中すること') + 'ンダよ。' + NL + NL + (KIDO[cKG]||'今の積み上げが次の大運で活きてくる') + 'んダ。';
+                      if (_ppLang === 'kr') {
+                        body = AT.buildDaiunBodyNeutral_KR(cName, period, cKG, isSei, isHiwa, myG);
+                      } else {
+                        const neutralTone = isSei ? 'あなたの日主「'+myG+'」とは相生の関係にあって、静かに支えてくれるような流れンダ。' : isHiwa ? 'あなたの日主「'+myG+'」と同じ種類の気が流れていて、居心地はいいけど変化は少ない時代ンダ。' : '追い風でも逆風でもない、実力を積み上げるための静かな時期ンダ。';
+                        body = '今の大運「'+cName+'（'+period+'）」は、'+neutralTone + NL + NL + 'この大運には「'+(WHAT[cKG]||cKG)+'」の気が流れていて、目立った成果は出にくいかもしれないけど、'+(SCENE[cKG]||'地道な積み上げ')+'に取り組むことが後から大きな力になる時代なんダよ🐼' + NL + NL + '【この時期の正しい動き方】' + NL + (DOSLOW[cKG]||'コツコツ積み上げることに集中すること') + 'ンダよ。' + NL + NL + (KIDO[cKG]||'今の積み上げが次の大運で活きてくる') + 'んダ。';
+                      }
                     }
 
                     let nextMsg = '';
                     if(nextD) {
                       const nName = nextD.kan + nextD.shi;
                       const nPeriod = nextD.ageFrom + '〜' + nextD.ageTo + '歳';
-                      if(nextIsKi) {
+                      const nType = nextIsKi ? 'ki' : nextIsKj ? 'kj' : 'neutral';
+                      if (_ppLang === 'kr') {
+                        nextMsg = AT.buildDaiunNextMsg_KR(nName, nPeriod, nType);
+                      } else if (nType === 'ki') {
                         nextMsg = NL + NL + '【次の大運「'+nName+'（'+nPeriod+'）」について】' + NL + '次は喜神の気が流れる追い風の大運ンダよ🌟 今この時期にしっかり土台を作っておくほど、次の大運で一気に花開くんダ。今日やっていることは、すべて未来の自分への投資ンダよ🐼';
-                      } else if(nextIsKj) {
+                      } else if (nType === 'kj') {
                         nextMsg = NL + NL + '【次の大運「'+nName+'（'+nPeriod+'）」について】' + NL + '次の大運も向かい風の気が続くンダ。だからこそ今から「消耗しない仕組み」を作ることが大切ンダよ。自分を守る選択を積み重ねることが、長い目で見た最大の開運になるんダ🐼';
                       } else {
                         nextMsg = NL + NL + '【次の大運「'+nName+'（'+nPeriod+'）」について】' + NL + '次の大運は中立の流れンダ。今の時期にどれだけ積み上げられるかが、次の大運の質を決めるんダよ。焦らず、でも確実に——それが今の自分にできる一番いい動き方ンダ🐼';
@@ -5851,7 +5812,7 @@ function FortuneResult() {
                       kanshi={h1.map(x => x.kanshi)}
                       data={{ total: h1.map(x=>x.total), love: h1.map(x=>x.love), work: h1.map(x=>x.work), money: h1.map(x=>x.money) }}
                       currentMonth={curM >= 1 && curM <= 6 ? curM : null}
-                      popoText={`上半期の運勢を${M.nichi.kan}${M.nichi.shi}日主・${M.kakukyoku}の命式で計算したンダよ🐼 喜神「${M._calc.kishin.join('・')}」が強まる月がピークになるんダ。`}
+                      popoText={langPick(AT.buildH1Popo_JA, AT.buildH1Popo_KR, M.nichi.kan, M.nichi.shi, M.kakukyoku, M._calc.kishin.join('・'))}
                     />
                   );
                 })()}
@@ -5870,7 +5831,7 @@ function FortuneResult() {
                       kanshi={h2.map(x => x.kanshi)}
                       data={{ total: h2.map(x=>x.total), love: h2.map(x=>x.love), work: h2.map(x=>x.work), money: h2.map(x=>x.money) }}
                       currentMonth={curM >= 7 && curM <= 12 ? curM : null}
-                      popoText={`下半期の運勢を${M.nichi.kan}${M.nichi.shi}日主の命式で計算したンダ🐼 忌神「${M._calc.kijin.join('・')}」が強まる月は慎重に、喜神「${M._calc.kishin.join('・')}」の月に動くと吉ンダよ。`}
+                      popoText={langPick(AT.buildH2Popo_JA, AT.buildH2Popo_KR, M.nichi.kan, M.nichi.shi, M._calc.kijin.join('・'), M._calc.kishin.join('・'))}
                     />
                   );
                 })()}

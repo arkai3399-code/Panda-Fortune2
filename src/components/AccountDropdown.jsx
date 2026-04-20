@@ -1,9 +1,13 @@
 import React from 'react';
 import { C } from '../data/theme.js';
 
+const _adLang = () => (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+
 // ── アカウントドロップダウン ──
 // 元HTML 5051-5201行。
 const AccountDropdown = ({ meishiki, acctOpen, setAcctOpen }) => {
+  const _lang = _adLang();
+  const _isKr = _lang === 'kr';
   const M = meishiki;
   const ui = M._ui || {};
   const saved = (() => { try { return JSON.parse(localStorage.getItem('pf_acct_info') || '{}'); } catch(e) { return {}; } })();
@@ -80,7 +84,7 @@ const AccountDropdown = ({ meishiki, acctOpen, setAcctOpen }) => {
               </div>
               {emailEdit ? (
                 <div>
-                  <input value={editEmail} onChange={e => setEditEmail(e.target.value)} style={InputStyle} placeholder="新しいメールアドレス" type="email" />
+                  <input value={editEmail} onChange={e => setEditEmail(e.target.value)} style={InputStyle} placeholder={_isKr ? '새 이메일 주소' : '新しいメールアドレス'} type="email" />
                   <p style={{ fontSize:10, color:"rgba(232,228,217,0.3)", marginTop:4 }}>※バックエンド接続後に有効化されます</p>
                   <div style={{ display:"flex" }}>
                     <button onClick={() => { alert('メールアドレス変更はバックエンド接続後に有効化されます🐼'); setEmailEdit(false); }} style={{ fontSize:10, color:'#fff', background:'rgba(201,168,76,0.7)', border:'none', borderRadius:6, padding:'4px 12px', cursor:'pointer', marginTop:6 }} data-i18n="変更申請">変更申請</button>
@@ -105,8 +109,8 @@ const AccountDropdown = ({ meishiki, acctOpen, setAcctOpen }) => {
                 </div>
                 {pwEdit ? (
                   <div>
-                    <input type="password" placeholder="現在のパスワード" style={{...InputStyle, marginBottom:4}} />
-                    <input type="password" placeholder="新しいパスワード" style={InputStyle} />
+                    <input type="password" placeholder={_isKr ? '현재 비밀번호' : '現在のパスワード'} style={{...InputStyle, marginBottom:4}} />
+                    <input type="password" placeholder={_isKr ? '새 비밀번호' : '新しいパスワード'} style={InputStyle} />
                     <p style={{ fontSize:10, color:"rgba(232,228,217,0.3)", marginTop:4 }}>※バックエンド接続後に有効化されます</p>
                     <div style={{ display:"flex" }}>
                       <button onClick={() => { alert('パスワード変更はバックエンド接続後に有効化されます🐼'); setPwEdit(false); }} style={{ fontSize:10, color:'#fff', background:'rgba(201,168,76,0.7)', border:'none', borderRadius:6, padding:'4px 12px', cursor:'pointer', marginTop:6 }} data-i18n="変更申請">変更申請</button>
@@ -142,7 +146,7 @@ const AccountDropdown = ({ meishiki, acctOpen, setAcctOpen }) => {
               <p style={{ fontSize:13, color:"rgba(232,228,217,0.7)", marginTop:3 }}>{nextBilling}</p>
             </div>
             <div style={{ paddingTop:14, textAlign:"center" }}>
-              <button onClick={() => { if(window.confirm('プランを解約しますか？\n解約後は次の更新日から請求が停止されます。')) { alert('Stripeカスタマーポータルへ接続（バックエンド接続後に有効化）🐼'); } }}
+              <button onClick={() => { if(window.confirm(_isKr ? '플랜을 해약하시겠습니까?\n해약 후에는 다음 갱신일부터 청구가 정지됩니다.' : 'プランを解約しますか？\n解約後は次の更新日から請求が停止されます。')) { alert(_isKr ? 'Stripe 고객 포털로 연결 (백엔드 연결 후 활성화)🐼' : 'Stripeカスタマーポータルへ接続（バックエンド接続後に有効化）🐼'); } }}
                 style={{ fontSize:12, color:"rgba(220,100,90,0.9)", background:"rgba(180,50,40,0.08)", border:"1px solid rgba(180,50,40,0.25)", borderRadius:8, padding:"8px 20px", cursor:"pointer", width:"100%" }}>
                 プランを解約する
               </button>

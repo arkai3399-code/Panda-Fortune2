@@ -8,6 +8,9 @@
  * questions は命式（M）を受け取って動的に文字列を返す関数。
  * 元HTML 4765-4809行。
  */
+// 現在の言語を取得
+const _lang = () => (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+
 export const POPO_CATS = [
   {
     label: '命式を知る',
@@ -19,6 +22,16 @@ export const POPO_CATS = [
       const shi = (M.nichi && M.nichi.shi) || '午';
       const ki = ((M._calc && M._calc.kishin) || []).join('・');
       const kj = ((M._calc && M._calc.kijin)  || []).join('・');
+      if (_lang() === 'kr') {
+        return [
+          '내 명식을 한마디로 알려줘',
+          '격국 "' + M.kakukyoku + '"의 의미를 자세히 알려줘',
+          '희신 "' + ki + '"를 활용하는 방법은?',
+          '기신 "' + kj + '"을(를) 피하려면?',
+          '일주 "' + kan + shi + '"의 특징은?',
+          '내 오행 밸런스에서 무엇을 알 수 있어?',
+        ];
+      }
       return [
         '私の命式を一言で教えて',
         '格局「' + M.kakukyoku + '」の意味を詳しく教えて',
@@ -37,6 +50,16 @@ export const POPO_CATS = [
     questions(M) {
       const du = M._calc && M._calc.currentDaiun;
       const duStr = du ? du.kan + du.shi : '大運';
+      if (_lang() === 'kr') {
+        return [
+          '오늘의 운세를 자세히 알려줘',
+          '오늘의 연애운 조언은?',
+          '오늘의 업무운 조언은?',
+          '오늘의 금전운 조언은?',
+          '지금의 대운 "' + duStr + '"의 의미는?',
+          '올해는 어떤 해야?',
+        ];
+      }
       return [
         '今日の運勢を詳しく教えて',
         '今日の恋愛運のアドバイスは？',
@@ -53,6 +76,16 @@ export const POPO_CATS = [
     bg: 'rgba(224,96,122,0.08)',
     border: 'rgba(224,96,122,0.3)',
     questions() {
+      if (_lang() === 'kr') {
+        return [
+          '나와 궁합이 좋은 사람의 특징은?',
+          '오행의 상생・상극이 궁합에 미치는 영향은?',
+          '지지합・천간합이 연애에 미치는 영향은?',
+          '육충(六冲)이 연애에 미치는 영향은?',
+          '기신과 희신이 일치하는 상대와의 관계는?',
+          'MBTI × 명식으로 보는 궁합이란?',
+        ];
+      }
       return [
         '私と相性のいい人の特徴は？',
         '五行の相生・相剋が相性に与える影響は？',

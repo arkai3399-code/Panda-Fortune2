@@ -141,3 +141,60 @@ export const JUNIU_NATURE_KR = {
   '胎': '타고난 \'가능성을 내포하는 기질\'을 가지고 있어요. 보이지 않는 곳에서 힘을 키워가는 성질이 있어서, 천천히 숙성시킬수록 본래의 힘이 깊어지는 거지. 주변에서 보기에는 잡히지 않는 것처럼 보이지만, 그 내면에는 풍부한 세계가 있다.',
   '養': '타고난 \'환경에 의해 길러지는 기질\'을 가지고 있어요. 사람과 환경으로부터 힘을 얻으며 성장하는 타입으로, 좋은 스승, 좋은 환경, 좋은 동료와의 인연이 삶을 풍요롭게 만들어 주는 타입이야.',
 };
+
+// ── 動的テンプレート（韓国語版）──
+const _GOGYO_TRAITS_KR = {
+  '木': '성장・창조・공감',
+  '火': '정열・표현・행동력',
+  '土': '안정・성실・포용력',
+  '金': '의지・미의식・결단',
+  '水': '지성・감수성・직감',
+};
+const _GOGYO_WEAK_KR = {
+  '木': '유연성・공감',
+  '火': '정열・자기표현',
+  '土': '안정・지속력',
+  '金': '결단・의지력',
+  '水': '지성・직감',
+};
+
+export function buildGogyoText_KR(topG) {
+  const trait = _GOGYO_TRAITS_KR[topG.g] || '';
+  return `명식 전체를 보면 "${topG.g}"의 에너지가 가장 강하며(${Math.round(topG.v)}점), ${trait}이(가) 개성의 핵심이 되고 있는 거예요.`;
+}
+
+export function buildWeakText_KR(botG) {
+  const trait = _GOGYO_WEAK_KR[botG.g] || '';
+  if (botG.v === 0) {
+    return `반대로 "${botG.g}"은(는) 0점이며, ${trait} 면이 과제가 되기 쉬운 거예요.`;
+  }
+  return `"${botG.g}"이(가) 가장 적으니(${Math.round(botG.v)}점), 의식적으로 보완하면 좋은 거예요.`;
+}
+
+export function buildKakuDetailText_KR(isJuou, kakukyoku) {
+  if (isJuou) {
+    return `격국은 "${kakukyoku}" — 명식의 에너지가 한 방향으로 집중된 특별한 형태인 거예요. 그 오행의 흐름을 타고 사는 것으로 본래의 힘이 최대화되는 거예요.`;
+  }
+  return `격국은 "보통격국" — 5개의 오행이 명식에 균형 있게 분포된 형태인 거예요. 이것은 "어떤 상황에서도 대응할 수 있는 유연성을 가진다"는 의미로, 특정 분야에 특화된 재능보다 폭넓은 상황에서 힘을 발휘할 수 있는 강함이 있는 거예요.`;
+}
+
+export function buildKiText_KR(ki, kj) {
+  if (!ki) return '';
+  return `희신은 "${ki}"이며, 이 기운이 흘러오는 시기・장소・사람이 최대의 순풍이 되는 거예요. 기신 "${kj}"의 기운이 강한 환경은 소모하기 쉬우므로 주의가 필요한 거예요.`;
+}
+
+export function buildJuniuNatureText_KR(dayUnsei) {
+  if (!dayUnsei) return '';
+  const nature = JUNIU_NATURE_KR[dayUnsei] || '';
+  return `일주의 십이운성 "${dayUnsei}"은(는) 타고난 본질적인 기질을 나타내는 거예요. ${nature}`;
+}
+
+export function buildDuText_KR(duIki, duImi, ki, kj) {
+  if (duIki) {
+    return `그리고 지금은 마침 희신 "${ki}"과(와) 대운이 겹치는 순풍의 시기인 거예요. 명식의 강점이 최대로 발휘될 수 있는 타이밍이니 적극적으로 움직여도 좋은 거예요.`;
+  }
+  if (duImi) {
+    return `지금은 기신 "${kj}"이(가) 대운으로 흐르는 시기인 거예요. 명식에 있어 소모하기 쉬운 흐름이니, 무리하게 공격하지 말고 방어를 굳히며 힘을 쌓는 시기로 생각하면 좋은 거예요.`;
+  }
+  return `지금의 대운은 명식에 대해 중립적인 흐름인 거예요. 큰 순풍도 역풍도 없는 시기이니, 조급해하지 말고 자신의 페이스로 착실히 쌓아 올려가는 것이 가장 좋은 거예요.`;
+}

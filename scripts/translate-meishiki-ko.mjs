@@ -127,29 +127,45 @@ async function main() {
   const profileKo = await translateAll(profileTexts, 'NIKCHU_SELF_PROFILES');
   const juniuKo = await translateAll(juniuTexts, 'JUNIU_NATURE');
 
-  console.log('\n[3/3] meishikiTextsKr.js 出力...');
+  console.log('\n[3/3] meishikiTextsKr.js の NIKCHU/JUNIU セクションを更新（テンプレート関数は保持）...');
   // JS エスケープ
   const esc = s => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
 
-  let out = '// ════════════════════════════════════════════════════════════════\n';
-  out += '// 鑑定まとめテキスト（韓国語版）— DeepL API 自動生成\n';
-  out += `// 生成日時: ${new Date().toISOString()}\n`;
-  out += '// 出典: src/App.jsx の NIKCHU_SELF_PROFILES / JUNIU_NATURE\n';
-  out += '// ════════════════════════════════════════════════════════════════\n\n';
-
-  out += 'export const NIKCHU_SELF_PROFILES_KR = {\n';
+  let profilesBlockStr = 'export const NIKCHU_SELF_PROFILES_KR = {\n';
   for (let i = 0; i < profileEntries.length; i++) {
-    out += `  '${profileEntries[i].key}': '${esc(profileKo[i])}',\n`;
+    profilesBlockStr += `  '${profileEntries[i].key}': '${esc(profileKo[i])}',\n`;
   }
-  out += '};\n\n';
+  profilesBlockStr += '};';
 
-  out += 'export const JUNIU_NATURE_KR = {\n';
+  let juniuBlockStr = 'export const JUNIU_NATURE_KR = {\n';
   for (let i = 0; i < juniuEntries.length; i++) {
-    out += `  '${juniuEntries[i].key}': '${esc(juniuKo[i])}',\n`;
+    juniuBlockStr += `  '${juniuEntries[i].key}': '${esc(juniuKo[i])}',\n`;
   }
-  out += '};\n';
+  juniuBlockStr += '};';
 
-  fs.writeFileSync(OUT_PATH, out, 'utf-8');
+  // 既存ファイルがあれば NIKCHU/JUNIU セクションだけを上書き（テンプレート関数は保持）
+  let fileExists = false;
+  let existingContent = '';
+  try { existingContent = fs.readFileSync(OUT_PATH, 'utf-8'); fileExists = true; } catch {}
+
+  if (fileExists && existingContent.includes('export const NIKCHU_SELF_PROFILES_KR')
+                 && existingContent.includes('export const JUNIU_NATURE_KR')) {
+    // 既存の NIKCHU_SELF_PROFILES_KR = {...}; を置換
+    const profRe = /export const NIKCHU_SELF_PROFILES_KR = \{[\s\S]*?\};/;
+    existingContent = existingContent.replace(profRe, profilesBlockStr);
+    const juniuRe = /export const JUNIU_NATURE_KR = \{[\s\S]*?\};/;
+    existingContent = existingContent.replace(juniuRe, juniuBlockStr);
+    fs.writeFileSync(OUT_PATH, existingContent, 'utf-8');
+    console.log('  既存ファイルの該当セクションのみ上書き（テンプレート関数は保持）');
+  } else {
+    // 新規作成
+    const header = '// ════════════════════════════════════════════════════════════════\n'
+      + '// 鑑定まとめテキスト（韓国語版）— DeepL API 自動生成\n'
+      + `// 生成日時: ${new Date().toISOString()}\n`
+      + '// ════════════════════════════════════════════════════════════════\n\n';
+    fs.writeFileSync(OUT_PATH, header + profilesBlockStr + '\n\n' + juniuBlockStr + '\n', 'utf-8');
+    console.log('  新規ファイルを作成（テンプレート関数は App.jsx 側で手動追加してください）');
+  }
   console.log(`\n✅ 完了！ 出力先: ${OUT_PATH}`);
   console.log(`   NIKCHU_SELF_PROFILES_KR: ${profileEntries.length}件`);
   console.log(`   JUNIU_NATURE_KR: ${juniuEntries.length}件`);

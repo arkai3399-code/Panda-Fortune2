@@ -11,6 +11,8 @@ import { calcCompatDetail } from '../logic/compatCalcFull.js';
 import { MBTI_32_COMPAT, MBTI_PAIR_TEXTS_528, getMbtiIntro } from '../data/compatData.js';
 import { _getJuniunsei } from '../engines/meishikiEngine.js';
 import { GENMEI_TEXTS, getGenmei, getGenmeiTextsByLang } from '../data/genmeiText.js';
+import { NIKCHU_PROFILES_KR } from '../data/compatDataKr.js';
+import * as CSK from '../data/compatScriptKr.js';
 
 // 外部参照互換
 window.MBTI_32_COMPAT = MBTI_32_COMPAT;
@@ -334,30 +336,37 @@ window._pfRunCompatScript = function() {
   // ── 続柄別ウェイト（宿命の縁wB / 引き合う力wH / MBTIwM / 恋愛運wL）──
   var wB, wH, wM, wL = 0, wJ = 0;
   var weightLabel = '';
+  var _wlIsKr = CSK.getLang() === 'kr';
+  var _wlT = _wlIsKr
+    ? { syk:'숙명의 인연', hka:'끌어당기는 힘', love:'연애운', lover:'연인', care:'관심 있는 사람', ex:'전 교제 상대', friend:'친구', work:'직장인', family:'가족', open:'(', close:')' }
+    : { syk:'宿命の縁', hka:'引き合う力', love:'恋愛運', lover:'恋人', care:'気になる人', ex:'元交際相手', friend:'友人', work:'職場の人', family:'家族', open:'（', close:'）' };
+  function _wlMake(parts, suffix) {
+    return parts.join(' + ') + (suffix ? _wlT.open + suffix + _wlT.close : '');
+  }
   if (rel === '恋人・パートナー') {
     wB = 0.25; wH = 0.25; wM = 0.25; wL = 0.25;
-    weightLabel = '宿命の縁25% + 引き合う力25% + MBTI25% + 恋愛運25%（恋人）';
+    weightLabel = _wlMake([_wlT.syk+'25%', _wlT.hka+'25%', 'MBTI25%', _wlT.love+'25%'], _wlT.lover);
   } else if (rel === '気になる人') {
     wB = 0.25; wH = 0.35; wM = 0.15; wL = 0.25;
-    weightLabel = '宿命の縁25% + 引き合う力35% + MBTI15% + 恋愛運25%（気になる人）';
+    weightLabel = _wlMake([_wlT.syk+'25%', _wlT.hka+'35%', 'MBTI15%', _wlT.love+'25%'], _wlT.care);
   } else if (rel === '元交際相手') {
     wB = 0.25; wH = 0.45; wM = 0.05; wL = 0.25;
-    weightLabel = '宿命の縁25% + 引き合う力45% + MBTI5% + 恋愛運25%（元交際相手）';
+    weightLabel = _wlMake([_wlT.syk+'25%', _wlT.hka+'45%', 'MBTI5%', _wlT.love+'25%'], _wlT.ex);
   } else if (rel === '配偶者' || rel === '婚約者') {
     wB = 0.30; wH = 0.20; wM = 0.30; wL = 0.20;
-    weightLabel = '宿命の縁30% + 引き合う力20% + MBTI30% + 恋愛運20%（' + rel + '）';
+    weightLabel = _wlMake([_wlT.syk+'30%', _wlT.hka+'20%', 'MBTI30%', _wlT.love+'20%'], _wlIsKr ? (rel==='配偶者'?'배우자':'약혼자') : rel);
   } else if (rel === '友人') {
     wB = 0.35; wH = 0.25; wM = 0.40; wL = 0;
-    weightLabel = '宿命の縁35% + 引き合う力25% + MBTI40%（友人）';
+    weightLabel = _wlMake([_wlT.syk+'35%', _wlT.hka+'25%', 'MBTI40%'], _wlT.friend);
   } else if (rel === '職場の人') {
     wB = 0.25; wH = 0.20; wM = 0.55; wL = 0;
-    weightLabel = '宿命の縁25% + 引き合う力20% + MBTI55%（職場の人）';
+    weightLabel = _wlMake([_wlT.syk+'25%', _wlT.hka+'20%', 'MBTI55%'], _wlT.work);
   } else if (rel === '家族') {
     wB = 0.60; wH = 0.25; wM = 0.15; wL = 0;
-    weightLabel = '宿命の縁60% + 引き合う力25% + MBTI15%（家族）';
+    weightLabel = _wlMake([_wlT.syk+'60%', _wlT.hka+'25%', 'MBTI15%'], _wlT.family);
   } else {
     wB = 0.30; wH = 0.25; wM = 0.25; wL = 0.20;
-    weightLabel = '宿命の縁30% + 引き合う力25% + MBTI25% + 恋愛運20%';
+    weightLabel = _wlMake([_wlT.syk+'30%', _wlT.hka+'25%', 'MBTI25%', _wlT.love+'20%'], '');
   }
 
   // ── 4枚目カードの表示切り替え ────────────────────────────────────
@@ -784,7 +793,7 @@ window._pfRunCompatScript = function() {
       elWeightNote.style.cssText = 'text-align:center;font-size:10px;color:rgba(255,255,255,.25);letter-spacing:.04em;padding-bottom:12px;font-family:serif;';
       elLabel.parentNode.insertBefore(elWeightNote, elLabel.nextSibling);
     }
-    if(elWeightNote) elWeightNote.textContent = '総合スコア = ' + weightLabel;
+    if(elWeightNote) elWeightNote.textContent = (CSK.getLang()==='kr' ? '종합 점수 = ' : '総合スコア = ') + weightLabel;
     // pf-score-summary（まとめ文）も newTotal で更新
     var elSummaryNew = document.getElementById('pf-score-summary');
     if(elSummaryNew) elSummaryNew.textContent = _ptNameShort + 'との相性：' + newLabel;
@@ -925,13 +934,9 @@ window._pfRunCompatScript = function() {
 
   var popoTxs = qa('.popo-tx');
   if(popoTxs[0]){
-    var popoText = compat_type==='相生型'
-      ? ptName+'はあなたにとってとってもいいエネルギーをくれる人なんダよ🐼 生年月日の占いで「相生」の組み合わせが出ていて、お互いが自然にパワーアップし合える関係なんダ。一緒にいるほど、2人ともどんどん成長していけるんダよ✨'
-      : compat_type==='比和型'
-      ? ptName+'とあなたは似た気質同士の組み合わせんダ🐼 価値観や感覚が近いから、一緒にいてとても居心地がいいはずンダ。同じ弱点も共有しやすいから、お互いに補い合う意識が大切なんダよ✨'
-      : compat_type==='相剋型'
-      ? ptName+'とあなたはエネルギーの方向性がぶつかりやすい組み合わせなんダ🐼 摩擦はあるけど、それがお互いを一番鍛え合う関係でもあるんダよ。乗り越えるほどに絆が深まるタイプの相性ンダ✨'
-      : ptName+'とあなたはバランスがとれた組み合わせンダ🐼 際立った強さも弱さもないから、お互いの努力次第でいくらでも深まれる関係なんダよ✨';
+    var popoText = CSK.getLang() === 'kr'
+      ? CSK.buildCompatPopoText_KR(ptName, compat_type)
+      : CSK.buildCompatPopoText_JA(ptName, compat_type);
     setText(popoTxs[0], popoText);
   }
 
@@ -1319,7 +1324,7 @@ window._pfRunCompatScript = function() {
 
   // PERSONALITYセクションタイトルを相手名で動的更新
   var elPersonalityTitle = document.getElementById('pf-personality-title');
-  if (elPersonalityTitle) elPersonalityTitle.textContent = ptName + 'はどんな人か';
+  if (elPersonalityTitle) elPersonalityTitle.textContent = ptName + (CSK.getLang()==='kr' ? '은(는) 어떤 사람인가' : 'はどんな人か');
 
   // 相手側の更新
   try {
@@ -1336,11 +1341,15 @@ window._pfRunCompatScript = function() {
     var ptNikchu = ptCalc.pillars.day.kan + ptCalc.pillars.day.shi;
     var ptKakuType = (ptCalc.kakukyoku && ptCalc.kakukyoku.name && ptCalc.kakukyoku.name.indexOf('従旺') >= 0) ? '従旺格' : '普通格局';
     var ptProfileKey = ptNikchu + '_' + ptKakuType;
-    var ptProfileText = NIKCHU_PROFILES[ptProfileKey] || NIKCHU_PROFILES[ptNikchu + '_普通格局'] || ptPersona.descThem;
+    // 言語別プロフィール: KR モードで KR 辞書があればそちら、なければ JA にフォールバック
+    var _compatLang = (window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+    var _profilesByLang = (_compatLang === 'kr' && Object.keys(NIKCHU_PROFILES_KR).length > 0)
+      ? NIKCHU_PROFILES_KR : NIKCHU_PROFILES;
+    var ptProfileText = _profilesByLang[ptProfileKey] || _profilesByLang[ptNikchu + '_普通格局']
+      || NIKCHU_PROFILES[ptProfileKey] || NIKCHU_PROFILES[ptNikchu + '_普通格局'] || ptPersona.descThem;
     if(elPtDesc) {
       // 相手の元命テキスト（月柱蔵干本気 × 日干）を日柱プロフィールの後に1段落で繋げる
       var ptGenmeiKey = getGenmei(ptCalc.pillars.day.kan, ptCalc.pillars.month.shi);
-      var _compatLang = (window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
       var _genmeiTextsForCompat = getGenmeiTextsByLang(_compatLang);
       var ptGenmeiData = ptGenmeiKey ? _genmeiTextsForCompat[ptGenmeiKey] : null;
       if (ptGenmeiData) {
@@ -1484,7 +1493,7 @@ window._pfRunCompatScript = function() {
 
   // HOW THEY SEE YOU セクションタイトルを相手名で動的更新
   var elHowseeTitle = document.getElementById('pf-howsee-title');
-  if (elHowseeTitle) elHowseeTitle.textContent = ptName + 'があなたをどう思っているか';
+  if (elHowseeTitle) elHowseeTitle.textContent = ptName + (CSK.getLang()==='kr' ? '이(가) 당신을 어떻게 생각하고 있는가' : 'があなたをどう思っているか');
 
   // ══ think-body / think-chips 書き換え ══
   var GOGYO_NAMES={木:'木の気（創造・感受性）',火:'火の気（情熱・行動力）',土:'土の気（安定・誠実）',金:'金の気（意志・美意識）',水:'水の気（直感・包容力）'};
@@ -1790,12 +1799,9 @@ window._pfRunCompatScript = function() {
   // ══ 最終ポポコメント書き換え ══
   var finalPopo=document.getElementById('pf-popo-final');
   if(finalPopo){
-    var finalText={
-      '相生型':'総合的に見て、あなたと'+ptName+'の相性は「一緒にいるほどお互いが成長できる、深い縁」ンダ✨ 生年月日の占いで「相生」の組み合わせが出ていて、'+ptName+'はあなたの運気そのものを上げてくれる存在なんダよ。長く関係を続けるほど2人ともよくなっていく可能性が高いんダ🐼',
-      '比和型':'総合的に見て、あなたと'+ptName+'は「似た者同士で居心地のいい」組み合わせンダ🐼 同じ気質だからこそわかり合いやすく、安心して本音を話せる関係を築けるんダよ。お互いの弱点も共有しやすいから、補い合う意識を持つことが長続きのカギンダ✨',
-      '相剋型':'総合的に見て、あなたと'+ptName+'は「刺激し合って成長できる」組み合わせンダ✨ エネルギーの方向性が違うから摩擦はあるけど、それがお互いを一番鍛え合う関係でもあるんダよ。乗り越えるほどに絆が深まるタイプだから、簡単に諦めないことが大切ンダ🐼',
-      '中和型':'総合的に見て、あなたと'+ptName+'は「バランスのとれた」組み合わせンダ🐼 際立った強さも弱さもないからこそ、お互いの努力次第でいくらでも深まれる関係なんダよ。丁寧に関係を育てていくことが、2人の絆を強くするカギになるんダ✨',
-    }[compat_type]||'総合的に見て、あなたと'+ptName+'の相性をしっかり読み解いたんダ🐼 2人の命式の流れを大切にして、お互いを尊重しながら関係を育てていくといいんダよ✨';
+    var finalText = CSK.getLang() === 'kr'
+      ? CSK.buildFinalPopoText_KR(ptName, compat_type)
+      : CSK.buildFinalPopoText_JA(ptName, compat_type);
     finalPopo.textContent=finalText;
   }
 

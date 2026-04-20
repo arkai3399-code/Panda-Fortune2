@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { C } from '../../data/theme.js';
 import { POPO_CATS, POPO_STORAGE_KEY, POPO_EXPIRE_MS } from '../../data/popo.js';
 import { calcDailyScore } from '../../logic/fortuneCalc.js';
+import { getGogyoTraitsByLang } from '../../data/meishikiSharedTexts.js';
+import * as ACK from '../../data/aiChatKr.js';
 import SectionLabel from '../common/SectionLabel.jsx';
 import Card from '../common/Card.jsx';
 import PandaIcon from '../common/PandaIcon.jsx';
@@ -94,24 +96,9 @@ function generatePopoAnswer(M, question) {
     水:{season:"冬・夜",    dir:"北",   color:"黒・紺",       obj:"水辺・川",       lucky:"水・黒・夜"},
   };
 
-  // 五行ごとの特性（基本命式タブの vals 配列と同じ内容）
-  var GOGYO_TRAIT = {
-    水:{trait:"直感力・柔軟性・知性が高い。流れに乗る力が強く、環境に応じて自在に形を変えられる。",
-        weak:"水が少ないと、直感が鈍く固執しやすくなる傾向があるんダ。",
-        supply:"水を補うには、北方位・黒・夜・冬・水辺が吉ンダよ。"},
-    火:{trait:"表現力・情熱・華やかさ。行動力があり、まわりを巻き込む熱量を持っているんダ。",
-        weak:"火が少ないと、自己表現が苦手で引っ込み思案になりやすいんダ。",
-        supply:"火を補うには、南方位・赤・昼・夏・明るい場所が吉ンダよ。"},
-    土:{trait:"安定感・誠実さ・信頼性。地に足がついた判断力と、人を支える包容力があるんダ。",
-        weak:"土が少ないと、根気がなく気持ちが安定しにくい傾向があるんダ。",
-        supply:"土を補うには、中央・黄・午後・土用・山や大地が吉ンダよ。"},
-    木:{trait:"成長・創造・柔軟性。新しいことへの好奇心と、しなやかに伸びていく力があるんダ。",
-        weak:"木が少ないと、発想が固まりやすく新しいことへの踏み出しが遅くなりやすいんダ。",
-        supply:"木を補うには、東方位・緑・朝・春・植物のある場所が吉ンダよ。"},
-    金:{trait:"意志の強さ・鋭さ・美意識。妥協しない精神と、物事を整える力があるんダ。",
-        weak:"金が少ないと、決断力が鈍く優柔不断になりやすい傾向があるんダ。",
-        supply:"金を補うには、西方位・白・夕・秋・金属・鉱石が吉ンダよ。"},
-  };
+  // 五行ごとの特性 — 共通モジュールから言語別に取得
+  var _gtLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+  var GOGYO_TRAIT = getGogyoTraitsByLang(_gtLang);
 
   // 格局説明（基本命式タブの kkDesc ロジックと同一）
   var isJuou = kaku.indexOf("従旺") >= 0 || kaku.indexOf("従強") >= 0;
@@ -524,11 +511,10 @@ function generatePopoAnswer(M, question) {
   // ──────────────────────────────────────────────────────
   // デフォルト
   // ──────────────────────────────────────────────────────
-  return "「" + q + "」について答えるンダよ🐼" + NL + NL +
-    "あなたの命式（" + kan + shi + "日主・" + kaku + "）から見ると——" + NL +
-    "喜神「" + ki + "」が流れてくる時期や場所・人に身を置くことが一番の開運のカギンダよ。" + NL +
-    "忌神「" + kj + "」が強まる時期は無理せず守りに入って、喜神の時期に思い切り動く。" + NL +
-    "今の大運「" + duStr + "」は" + (duIsKi ? "吉の流れンダ。今こそ動き時ンダよ🐼" : duIsKj ? "守りの時期ンダ。土台固めに集中するといいんダよ🐼" : "中立の流れンダ。着実に積み上げるといいんダよ🐼");
+  if (ACK.getLang() === 'kr') {
+    return ACK.buildDefaultAnswer_KR(q, kan, shi, kaku, ki, kj, duStr, duIsKi, duIsKj);
+  }
+  return ACK.buildDefaultAnswer_JA(q, kan, shi, kaku, ki, kj, duStr, duIsKi, duIsKj);
 }
 
 
@@ -546,36 +532,14 @@ function makeInitialMessages(M) {
   var mbti  = (M._ui && M._ui.mbti) || "";
   var du    = calc.currentDaiun || null;
   var duStr = du ? du.kan + du.shi : "";
-  var NL = "\n";
   var JIKKAN_G  = {"甲":"木","乙":"木","丙":"火","丁":"火","戊":"土","己":"土","庚":"金","辛":"金","壬":"水","癸":"水"};
   var kanGogyo  = JIKKAN_G[kan]  || "水";
-  var GOGYO_OPEN = {
-    "木": "しなやかで好奇心旺盛な木の気を持つ人ンダよ🌱",
-    "火": "情熱と行動力にあふれた火の気を持つ人ンダよ🔥",
-    "土": "揺るぎない安定感を持つ土の気の人ンダよ🌍",
-    "金": "高い意志と美意識を持つ金の気の人ンダよ💎",
-    "水": "深い思慮と感受性を持つ水の気の人ンダよ🌊",
-  };
-  var moJisshin = (mo && mo.jisshin) ? "月柱の十神「" + mo.jisshin + "」が社会での動き方に影響しているンダ。" : "";
-  var duComment = duStr ? "今は大運「" + duStr + "」の時期——" +
-    (calc.kishin && du && calc.kishin.includes(JIKKAN_G[du.kan]) ?
-      "喜神と重なる吉の流れの中にいるンダ🐼" :
-      calc.kijin && du && calc.kijin.includes(JIKKAN_G[du.kan]) ?
-      "少し守りを意識しながら動く時期ンダ🐼" :
-      "着実に積み上げていく時期ンダ🐼"
-    ) : "";
-  var mbtiComment = mbti ? "MBTIの「" + mbti + "」と命式が重なると、" +
-    (kanGogyo === "水" || kanGogyo === "木" ? "感受性と直感力が際立つ個性" :
-     kanGogyo === "火" ? "情熱と表現力が突出した個性" :
-     kanGogyo === "金" ? "意志の強さと美意識が光る個性" : "包容力と安定感が際立つ個性") +
-    "になるんダよ。" : "";
-  var text = "こんにちはンダ🐼 ポポだよ！あなたの命式、ちゃんと全部読んだんダ。" + NL + NL +
-    "日主「" + kan + shi + "」——" + (GOGYO_OPEN[kanGogyo] || "") + NL +
-    "格局は「" + kaku + "」で、喜神「" + ki + "」が追い風、忌神「" + kj + "」が向かい風ンダ。" + NL +
-    (moJisshin ? moJisshin + NL : "") +
-    (mbtiComment ? mbtiComment + NL : "") +
-    (duComment ? duComment + NL : "") + NL +
-    "命式・今日の運勢・相性のこと、なんでも聞いてほしいんダよ。下のボタンから選んでもいいし、直接入力してもOKンダ🐼";
+  var _imLang = ACK.getLang();
+  var moJisshin   = _imLang === 'kr' ? ACK.buildMoJisshin_KR(mo && mo.jisshin) : ACK.buildMoJisshin_JA(mo && mo.jisshin);
+  var duComment   = _imLang === 'kr' ? ACK.buildDuComment_KR(duStr, calc.kishin, calc.kijin, du, JIKKAN_G) : ACK.buildDuComment_JA(duStr, calc.kishin, calc.kijin, du, JIKKAN_G);
+  var mbtiComment = _imLang === 'kr' ? ACK.buildMbtiComment_KR(mbti, kanGogyo) : ACK.buildMbtiComment_JA(mbti, kanGogyo);
+  var greetOpts   = { kan: kan, shi: shi, kaku: kaku, ki: ki, kj: kj, mbti: mbti, kanGogyo: kanGogyo, moJisshin: moJisshin, mbtiComment: mbtiComment, duComment: duComment };
+  var text = _imLang === 'kr' ? ACK.buildInitialGreeting_KR(greetOpts) : ACK.buildInitialGreeting_JA(greetOpts);
   return [{ role: "popo", text: text }];
 }
 
@@ -643,9 +607,10 @@ const AiChatTab = ({ meishiki }) => {
       var _remainMs = POPO_EXPIRE_MS - (_now - _oldest.sentAt);
       if (_remainMs > 0) {
         var _remainHr = Math.ceil(_remainMs / (1000 * 60 * 60));
+        var _isKrExp = ACK.getLang() === 'kr';
         oldestExpiry = _remainHr >= 24
-          ? Math.ceil(_remainHr / 24) + "日後"
-          : _remainHr + "時間後";
+          ? Math.ceil(_remainHr / 24) + (_isKrExp ? '일 후' : '日後')
+          : _remainHr + (_isKrExp ? '시간 후' : '時間後');
       }
     }
   } catch(e) {}
@@ -683,7 +648,7 @@ const AiChatTab = ({ meishiki }) => {
           <div style={{ width:44, height:44, borderRadius:"50%", background:"rgba(201,168,76,0.12)", border:"1px solid rgba(201,168,76,0.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}><PandaIcon size={26} /></div>
           <div style={{ flex:1 }}>
             <p style={{ fontFamily:"'Shippori Mincho',serif", fontSize:16, fontWeight:700, color:C.gold }}>ポポに聞く</p>
-            <p style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>{M.nichi.kan}{M.nichi.shi}日主・{M.kakukyoku}をもとに答えるンダよ🐼</p>
+            <p style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>{ACK.getLang()==='kr' ? ACK.buildHeaderSubtext_KR(M.nichi.kan, M.nichi.shi, M.kakukyoku) : ACK.buildHeaderSubtext_JA(M.nichi.kan, M.nichi.shi, M.kakukyoku)}</p>
           </div>
 
         </div>
@@ -693,7 +658,7 @@ const AiChatTab = ({ meishiki }) => {
           background:"rgba(201,168,76,0.05)", border:"1px solid rgba(201,168,76,0.12)" }}>
           <span style={{ fontSize:11 }}>💾</span>
           <p style={{ fontSize:10, color:C.textMuted, lineHeight:1.5 }}>
-            会話は<span style={{ color:C.goldDim, fontWeight:600 }}>72時間経つと削除されるンダよ🐼</span>
+            {ACK.getLang()==='kr' ? '대화는 ' : '会話は'}<span style={{ color:C.goldDim, fontWeight:600 }}>{ACK.getLang()==='kr' ? '72시간이 지나면 삭제돼요🐼' : '72時間経つと削除されるンダよ🐼'}</span>
           </p>
         </div>
 
@@ -744,7 +709,7 @@ const AiChatTab = ({ meishiki }) => {
             value={input}
             onChange={function(e){ setInput(e.target.value); }}
             onKeyDown={function(e){ if(e.key==="Enter" && input.trim()){ send(input); } }}
-            placeholder="自由に質問もできるンダよ…"
+            placeholder={ACK.getLang()==='kr' ? '자유롭게 질문할 수도 있어요…' : '自由に質問もできるンダよ…'}
             style={{ flex:1, padding:"12px 16px", borderRadius:12, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(201,168,76,0.25)", color:C.text, fontSize:13, outline:"none" }}
           />
           <button

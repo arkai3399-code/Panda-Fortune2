@@ -13,6 +13,9 @@ import {
   getKaiUnRank,
 } from '../logic/fortuneCalc.js';
 import { useLang } from '../i18n/useLang.js';
+import { langPick } from '../i18n/templateHelpers.js';
+import * as AT from '../data/appTemplatesKr.js';
+import { getStarDescByLang, buildStarFallback_JA, buildStarFallback_KR, getKuubouDescByLang, getTsuhenInfoByLang } from '../data/meishikiInlineDescs.js';
 import TodayFortuneBlock from '../components/blocks/TodayFortuneBlock.jsx';
 import HalfYearBlock from '../components/blocks/HalfYearBlock.jsx';
 import KaiUnCalendar from '../components/blocks/KaiUnCalendar.jsx';
@@ -338,19 +341,29 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
         <div style={{ maxWidth: 800, margin: "0 auto", padding: "40px 20px 0" }}>
 
           {/* ── タイトルブロック ── */}
+          {(() => {
+            const _ttlLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+            const _ttlIsKr = _ttlLang === 'kr';
+            const _nameTxt = M.name.last || M.name.first
+              ? `${M.name.last}${M.name.first}` + (_ttlIsKr ? '님' : 'さん')
+              : `${M.nichi.kan}${M.nichi.shi}` + (_ttlIsKr ? '일간' : '日主');
+            const _ttlSuffix = _ttlIsKr ? '의 명식' : 'の命式';
+            return (
           <div className="fade-section" style={{ textAlign: "center", marginBottom: 40 }}>
             <div style={{ fontSize: 48, marginBottom: 12, animation: "floatPanda 3s ease-in-out infinite", display: "inline-block", filter: "drop-shadow(0 4px 16px rgba(201,168,76,0.3))" }}><PandaIcon size={36} /></div>
-            <p style={{ fontSize: 10, letterSpacing: "0.45em", color: C.gold, marginBottom: 12, opacity: 0.8 }}>FORTUNE RESULT · 鑑定結果</p>
+            <p style={{ fontSize: 10, letterSpacing: "0.45em", color: C.gold, marginBottom: 12, opacity: 0.8 }}>FORTUNE RESULT · {_ttlIsKr ? '감정 결과' : '鑑定結果'}</p>
             <h1 style={{ fontFamily: "'Shippori Mincho', serif", fontSize: "clamp(28px,5vw,42px)", fontWeight: 800, lineHeight: 1.3, marginBottom: 8 }}>
-              <span className="shimmer-text">{M.name.last || M.name.first ? `${M.name.last}${M.name.first}さん` : `${M.nichi.kan}${M.nichi.shi}日主`}</span>の命式
+              <span className="shimmer-text">{_nameTxt}</span>{_ttlSuffix}
             </h1>
             <p style={{ fontSize: 13, color: C.textMuted, letterSpacing: "0.08em" }}>
               {M.birthDate} · {M.birthTime} · {M.birthPlace}
             </p>
             <div style={{ marginTop: 10, display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(80,140,200,0.1)", border: "1px solid rgba(80,140,200,0.25)", borderRadius: 20, padding: "4px 14px", fontSize: 11, color: C.waterBlue }}>
-              📍 補正済み {M.correctedTime}{M.mbti ? ` · ${M.mbti}` : ''}
+              📍 {_ttlIsKr ? '보정 완료' : '補正済み'} {M.correctedTime}{M.mbti ? ` · ${M.mbti}` : ''}
             </div>
           </div>
+            );
+          })()}
 
           {/* ── タブ ── */}
           <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap", justifyContent: "center" }}>
@@ -792,7 +805,7 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
 
                 {/* 読み方ヒント */}
                 <div style={{ padding: "10px 14px", background: "rgba(255,255,255,0.02)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.05)", fontSize: 12, color: C.textMuted, lineHeight: 1.8, marginBottom: 10 }}>
-                  日柱（<span style={{ color: C.gold }}>{M.nichi.kan}{M.nichi.shi}</span>）が「あなた自身」を表す最も重要な柱。天干・地支の五行色はその気の属性を示しているンダよ。
+                  {langPick(AT.buildNichiPillarHint_JA, AT.buildNichiPillarHint_KR, M.nichi.kan, M.nichi.shi)}
                 </div>
 
                 <p style={{ fontSize: 10, color: "rgba(255,255,255,0.18)", letterSpacing: "0.05em" }}>
@@ -1141,23 +1154,16 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
                   <p style={{ fontSize:11, color:C.textMuted, letterSpacing:"0.15em", marginBottom:12 }}>特殊星（持って生まれた星）</p>
                   {M.tokuseiboshi && M.tokuseiboshi.length > 0 ? (
                     <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                      {M.tokuseiboshi.map((s,i) => {
-                        const STAR_DESC = {
-                          '天乙貴人':'困ったときに必ず助けてくれる人が現れる「救いの星」。人脈・縁に恵まれやすいんダ。',
-                          '文昌星':'学習能力・文章力・知性を高める星。書く仕事・研究・教育系で才能が光るんダよ。',
-                          '紅艷星':'色気・魅力・人を惹きつける星。恋愛での影響力が強く、出会い運に恵まれやすいんダ。',
-                          '将星':'リーダーシップと統率力の星。組織や集団の中で自然とまとめ役になりやすいんダ。',
-                          '驛馬星':'移動・変化・旅の星。環境を変えることで運が開けるタイプンダよ。',
-                          '桃花星':'人を引きつける魅力の星。人気運・恋愛運に強く、芸能・接客系で輝きやすいんダ。',
-                          '劫殺星':'変化・決断力の星。大きな転換点で力を発揮するが、衝動的な行動には注意ンダよ。',
-                        };
-                        return (
+                      {(() => {
+                        const _starLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+                        const STAR_DESC = getStarDescByLang(_starLang);
+                        return M.tokuseiboshi.map((s,i) => (
                           <div key={i} style={{ display:"flex", gap:14, padding:"13px 16px", borderRadius:12, background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)" }}>
                             <span style={{ fontSize:11, padding:"3px 10px", height:"fit-content", border:`1px solid ${C.border}`, borderRadius:20, color:C.goldDim, whiteSpace:"nowrap", flexShrink:0 }}>✦ {s}</span>
-                            <p style={{ fontSize:12, color:C.textMuted, lineHeight:1.7 }}>{STAR_DESC[s]||`${s}を持っているんダ。この星の影響がある命式は、特定の場面で独自の力を発揮するんダよ。`}</p>
+                            <p style={{ fontSize:12, color:C.textMuted, lineHeight:1.7 }}>{STAR_DESC[s] || (_starLang==='kr' ? buildStarFallback_KR(s) : buildStarFallback_JA(s))}</p>
                           </div>
-                        );
-                      })}
+                        ));
+                      })()}
                     </div>
                   ) : (
                     <p style={{ fontSize:12, color:C.textMuted }}>今回の命式には特殊星は見当たらないんダ。特殊星がないことはごく普通のことで、基本の五行バランスがより純粋に現れやすい命式ンダよ🐼</p>
@@ -1218,18 +1224,8 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
                     return '比肩';
                   }
                   const dayKan = pillars.day.kan;
-                  const TSUHEN_INFO = {
-                    '比肩': { icon:'◈', color:'rgba(180,180,120,0.8)', bg:'rgba(180,180,80,0.08)', bd:'rgba(180,180,80,0.2)',  short:'自立・競争心',  detail:'独立心が強く、自分の力で切り開くタイプ。ライバルや兄弟姉妹との縁が深い。' },
-                    '劫財': { icon:'◇', color:'rgba(200,160,80,0.9)',  bg:'rgba(200,160,80,0.08)', bd:'rgba(200,160,80,0.22)', short:'競争・浪費',    detail:'勝負強さと同時に散財・損失の気も。仲間を引き込む力があるが裏切りにも注意。' },
-                    '食神': { icon:'✦', color:'rgba(120,200,120,0.9)', bg:'rgba(100,180,100,0.07)',bd:'rgba(100,180,100,0.2)',  short:'才能・楽しむ',  detail:'芸術・グルメ・話術など自己表現が豊か。子供・部下・創作物に縁が深い。' },
-                    '傷官': { icon:'✧', color:'rgba(100,220,160,0.9)', bg:'rgba(80,200,140,0.07)', bd:'rgba(80,200,140,0.2)',  short:'表現・反骨心', detail:'圧倒的な才能と個性。型にはまらない独自の道を切り開く力がある。上司・権威への反発も。' },
-                    '偏財': { icon:'◆', color:'rgba(200,200,80,0.9)',  bg:'rgba(200,190,60,0.08)', bd:'rgba(200,190,60,0.2)',  short:'財運・行動力', detail:'稼ぐ力と異性への積極性。動いてお金を引き寄せるタイプだが管理が課題。父親との縁も。' },
-                    '正財': { icon:'◉', color:'rgba(220,190,80,0.9)',  bg:'rgba(220,190,80,0.08)', bd:'rgba(220,190,80,0.22)', short:'蓄財・着実',   detail:'地道な努力で財を積み上げる。誠実で堅実。配偶者（男性の場合）との縁にも表れる。' },
-                    '偏官': { icon:'▲', color:'rgba(180,100,200,0.9)', bg:'rgba(160,80,200,0.08)', bd:'rgba(160,80,200,0.2)',  short:'地位・重圧',  detail:'強いプレッシャーに揉まれて実力を発揮するタイプ。軍・警察・競争の激しい仕事に縁。' },
-                    '正官': { icon:'△', color:'rgba(140,160,220,0.9)', bg:'rgba(120,140,210,0.08)',bd:'rgba(120,140,210,0.2)', short:'名誉・秩序',   detail:'社会的評価・地位・正しさを重んじる。上司・会社に恵まれやすい。ルールを守る誠実さ。' },
-                    '偏印': { icon:'◎', color:'rgba(100,180,220,0.9)', bg:'rgba(80,160,210,0.07)', bd:'rgba(80,160,210,0.2)',  short:'直感・サポーター', detail:'直感と学習能力が高い。型破りな発想。母親・恩師・異質なサポーターとの縁。' },
-                    '正印': { icon:'○', color:'rgba(120,200,240,0.9)', bg:'rgba(100,180,230,0.07)',bd:'rgba(100,180,230,0.2)', short:'学問・保護',   detail:'知識・文化・学習に縁が深い。母親・目上の人に守られやすい。資格・学位との縁も。' },
-                  };
+                  const _tsLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+                  const TSUHEN_INFO = getTsuhenInfoByLang(_tsLang);
                   // 各柱の通変星を算出
                   const pillarRows = [
                     { label:'年柱', kan:pillars.year.kan,  shi:pillars.year.shi,  pillarKey:'year' },
@@ -1276,16 +1272,16 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
                         const dayGogyo = JIKKAN_G2[JIKKAN_L2.indexOf(dayKan)] || '水';
                         // 同点の星をまとめる
                         const tieStars = sortedTs.filter(([,c]) => c === sortedTs[2]?.[1] && c <= 1);
-                        const tieNote = tieStars.length >= 3
-                          ? ` また${tieStars.map(([n]) => `「${(TSUHEN_INFO[n]||{}).icon||''}${n}」`).join('・')}も同点で命式に存在しているンダ。`
-                          : sortedTs.slice(2, 5).length > 0
-                            ? ` ほかに${sortedTs.slice(2,5).map(([n])=>`「${(TSUHEN_INFO[n]||{}).icon||''}${n}」`).join('・')}も命式に出ているンダ。`
-                            : '';
-                        return `命式の通変星を全部読み解いたんダよ🐼` +
-                               ` 一番強く出ているのは「${info1.icon||''}${top}」（×${topCnt.toFixed(1).replace('.0','')}）で、${info1.detail || ''}` +
-                               (top2 ? ` 次に「${info2.icon||''}${top2}」（×${top2Cnt.toFixed(1).replace('.0','')}）で、${info2.detail || ''}` : '') +
-                               tieNote +
-                               ` 日主「${dayKan}（${dayGogyo}）」との関係でこのパターンが生まれているんダ。この組み合わせが、あなたの人生の流れの土台になっているんダよ🐼`;
+                        const _tsrLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+                        const _quote = (n) => _tsrLang==='kr' ? `"${(TSUHEN_INFO[n]||{}).icon||''}${n}"` : `「${(TSUHEN_INFO[n]||{}).icon||''}${n}」`;
+                        const tieStarsParts = tieStars.length >= 3 ? tieStars.map(([n]) => _quote(n)) : [];
+                        const otherStarsParts = (tieStars.length < 3) ? sortedTs.slice(2,5).map(([n]) => _quote(n)) : [];
+                        return langPick(AT.buildTsuhenseiReading_JA, AT.buildTsuhenseiReading_KR, {
+                          top, top2, topCnt, top2Cnt,
+                          info1Icon: info1.icon, info2Icon: info2.icon,
+                          info1Detail: info1.detail || '', info2Detail: info2.detail || '',
+                          tieStarsParts, otherStarsParts, dayKan, dayGogyo,
+                        });
                       })()}/>
 
                       {/* 上段：柱カード＋ランキング 横並び */}
@@ -2058,7 +2054,7 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
                       kanshi={h1.map(x => x.kanshi)}
                       data={{ total: h1.map(x=>x.total), love: h1.map(x=>x.love), work: h1.map(x=>x.work), money: h1.map(x=>x.money) }}
                       currentMonth={curM >= 1 && curM <= 6 ? curM : null}
-                      popoText={`上半期の運勢を${M.nichi.kan}${M.nichi.shi}日主・${M.kakukyoku}の命式で計算したンダよ🐼 喜神「${M._calc.kishin.join('・')}」が強まる月がピークになるんダ。`}
+                      popoText={langPick(AT.buildH1Popo_JA, AT.buildH1Popo_KR, M.nichi.kan, M.nichi.shi, M.kakukyoku, M._calc.kishin.join('・'))}
                     />
                   );
                 })()}
@@ -2077,7 +2073,7 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
                       kanshi={h2.map(x => x.kanshi)}
                       data={{ total: h2.map(x=>x.total), love: h2.map(x=>x.love), work: h2.map(x=>x.work), money: h2.map(x=>x.money) }}
                       currentMonth={curM >= 7 && curM <= 12 ? curM : null}
-                      popoText={`下半期の運勢を${M.nichi.kan}${M.nichi.shi}日主の命式で計算したンダ🐼 忌神「${M._calc.kijin.join('・')}」が強まる月は慎重に、喜神「${M._calc.kishin.join('・')}」の月に動くと吉ンダよ。`}
+                      popoText={langPick(AT.buildH2Popo_JA, AT.buildH2Popo_KR, M.nichi.kan, M.nichi.shi, M._calc.kijin.join('・'), M._calc.kishin.join('・'))}
                     />
                   );
                 })()}
