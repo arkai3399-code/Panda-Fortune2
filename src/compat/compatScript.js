@@ -9,6 +9,7 @@
 // ══════════════════════════════════════════════════════════════
 import { calcCompatDetail } from '../logic/compatCalcFull.js';
 import { MBTI_32_COMPAT, MBTI_PAIR_TEXTS_528, getMbtiIntro } from '../data/compatData.js';
+import { _getJuniunsei } from '../engines/meishikiEngine.js';
 
 // 外部参照互換
 window.MBTI_32_COMPAT = MBTI_32_COMPAT;
@@ -1836,6 +1837,57 @@ window._pfRunCompatScript = function() {
     // 2人のスコアを合成（両者の平均 + 相性タイプボーナス）
     var compatBonus = compat_type==='相生型'?6:compat_type==='比和型'?3:compat_type==='相剋型'?-4:0;
 
+    // 三合（会局・半会）テーブル
+    var SANGOU = [
+      ['申','子','辰'],  // 水局
+      ['亥','卯','未'],  // 木局
+      ['寅','午','戌'],  // 火局
+      ['巳','酉','丑']   // 金局
+    ];
+    var SHISEI = ['子','卯','午','酉'];  // 四正（半会の成立条件）
+
+    // 通関作用テーブル（相剋型のときのみ適用、流月天干が仲介五行のとき +7）
+    var TSUUKAN = {
+      '木土': '火','土木': '火',  // 木剋土 → 火が仲介
+      '火金': '土','金火': '土',  // 火剋金 → 土が仲介
+      '土水': '金','水土': '金',  // 土剋水 → 金が仲介
+      '金木': '水','木金': '水',  // 金剋木 → 水が仲介
+      '水火': '木','火水': '木'   // 水剋火 → 木が仲介
+    };
+
+    // 日干→五行マップ
+    var KAN_TO_GOGYO = {甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'};
+    var myDayGogyo = KAN_TO_GOGYO[myCalc.pillars.day.kan] || '';
+    var ptDayGogyo = KAN_TO_GOGYO[ptCalc.pillars.day.kan] || '';
+    var tsuukanGogyoForPair = (compat_type === '相剋型') ? (TSUUKAN[myDayGogyo + ptDayGogyo] || '') : '';
+
+    function calcSangouBonus(myShi, ptShi, flowShi) {
+      var three = [myShi, ptShi, flowShi];
+      // 三合会局: 3つの支が三合の組み合わせと完全一致
+      for (var i = 0; i < SANGOU.length; i++) {
+        var s = SANGOU[i];
+        if (s.indexOf(three[0]) >= 0 && s.indexOf(three[1]) >= 0 && s.indexOf(three[2]) >= 0
+            && three[0] !== three[1] && three[1] !== three[2] && three[0] !== three[2]) {
+          return 10;  // 三合会局成立 +10
+        }
+      }
+      // 三合半会: 流月地支 + どちらかの日支（四正を含む場合のみ）
+      for (var i = 0; i < SANGOU.length; i++) {
+        var s = SANGOU[i];
+        if (s.indexOf(myShi) >= 0 && s.indexOf(flowShi) >= 0 && myShi !== flowShi) {
+          if (SHISEI.indexOf(myShi) >= 0 || SHISEI.indexOf(flowShi) >= 0) {
+            return 5;  // 半会成立 +5
+          }
+        }
+        if (s.indexOf(ptShi) >= 0 && s.indexOf(flowShi) >= 0 && ptShi !== flowShi) {
+          if (SHISEI.indexOf(ptShi) >= 0 || SHISEI.indexOf(flowShi) >= 0) {
+            return 5;  // 半会成立 +5
+          }
+        }
+      }
+      return 0;
+    }
+
     var now = new Date();
     var curYear = now.getFullYear();
     var curMonth = now.getMonth()+1;
@@ -1847,28 +1899,54 @@ window._pfRunCompatScript = function() {
     for(var m=1;m<=12;m++){
       var myS  = monthScore(myCalc,  curYear, m);
       var ptS  = monthScore(ptCalc,  curYear, m);
-      var combined = Math.round((myS + ptS) / 2) + compatBonus;
       var fm = getFlowMonth(curYear, m);
-      // 空亡月判定
+      var sangouBonus = calcSangouBonus(myCalc.pillars.day.shi, ptCalc.pillars.day.shi, fm.shi);
+      // 通関作用ボーナス（相剋型 × 流月天干が仲介五行）
+      var tsuukanBonus = 0;
+      if (tsuukanGogyoForPair && fm.gogyoKan === tsuukanGogyoForPair) {
+        tsuukanBonus = 7;
+      }
+      // 十二運相乗ボーナス（2人とも勢いある月 +4 / 2人とも穏やかな月 -3）
+      var myJuniun = _getJuniunsei(myCalc.pillars.day.kan, fm.shiIdx);
+      var ptJuniun = _getJuniunsei(ptCalc.pillars.day.kan, fm.shiIdx);
+      var JUNIUN_STRONG = ['建禄','帝旺','冠帯'];
+      var JUNIUN_WEAK = ['死','墓','絶'];
+      var juniunBonus = 0;
+      if (JUNIUN_STRONG.indexOf(myJuniun) >= 0 && JUNIUN_STRONG.indexOf(ptJuniun) >= 0) {
+        juniunBonus = 4;
+      } else if (JUNIUN_WEAK.indexOf(myJuniun) >= 0 && JUNIUN_WEAK.indexOf(ptJuniun) >= 0) {
+        juniunBonus = -3;
+      }
+      // 双方六冲ペナルティ（流月地支が自分と相手の両方の日支と六冲、つまり同日支ペアで発生）
+      var doubleChuu = 0;
+      if (ROKUCHUU_V[fm.shi] === myCalc.pillars.day.shi && ROKUCHUU_V[fm.shi] === ptCalc.pillars.day.shi) {
+        doubleChuu = -6;
+      }
+      var combined = Math.round((myS + ptS) / 2) + compatBonus + sangouBonus + tsuukanBonus + juniunBonus + doubleChuu;
+      // 空亡月判定（減衰率方式: 中央値60に向けてスコアを引き寄せる）
       var isMyKuubouMonth = myKuubouTl.indexOf(fm.shi) >= 0;
       var isPtKuubouMonth = ptKuubouTl.indexOf(fm.shi) >= 0;
       var kuubouState = 'none';
+      var NEUTRAL = 60;
       if (isMyKuubouMonth && isPtKuubouMonth) {
-        combined -= 15;
+        combined = Math.round(combined - (combined - NEUTRAL) * 0.50);
         kuubouState = 'both';
       } else if (isMyKuubouMonth) {
-        combined -= 8;
-        kuubouState = 'mine';
+        combined = Math.round(combined - (combined - NEUTRAL) * 0.35);
+        kuubouState = 'mine';   // = 'self' (互換性のため'mine'を維持)
       } else if (isPtKuubouMonth) {
-        combined -= 5;
-        kuubouState = 'theirs';
+        combined = Math.round(combined - (combined - NEUTRAL) * 0.25);
+        kuubouState = 'theirs'; // = 'partner' (互換性のため'theirs'を維持)
       }
       combined = Math.max(20, Math.min(95, combined));
-      months.push({month:m, myScore:myS, ptScore:ptS, combined:combined, fm:fm, kuubouState:kuubouState});
+      months.push({month:m, myScore:myS, ptScore:ptS, combined:combined, fm:fm, kuubouState:kuubouState, tsuukanBonus:tsuukanBonus, tsuukanGogyo:tsuukanGogyoForPair, juniunBonus:juniunBonus, myJuniun:myJuniun, ptJuniun:ptJuniun, doubleChuu:doubleChuu});
     }
 
     // 最高・最低月を特定
-    var maxM = months.reduce(function(a,b){return a.combined>b.combined?a:b;});
+    // 「最高の時期」候補からは空亡月を除外。全12ヶ月空亡の極端ケースだけフォールバック
+    var nonKuubouMonths = months.filter(function(m){ return m.kuubouState === 'none'; });
+    var bestPool = nonKuubouMonths.length > 0 ? nonKuubouMonths : months;
+    var maxM = bestPool.reduce(function(a,b){return a.combined>b.combined?a:b;});
     var minM = months.reduce(function(a,b){return a.combined<b.combined?a:b;});
     var topTwo = months.slice().sort(function(a,b){return b.combined-a.combined;}).slice(0,2);
 
@@ -1876,13 +1954,13 @@ window._pfRunCompatScript = function() {
     function makeDesc(mo){
       // 空亡月テキスト（最優先）
       if (mo.kuubouState === 'both') {
-        return 'この月は2人同時に空亡の影響を受けやすい時期んダ。判断力や直感力が落ちて、お互いにすれ違いやすくなるんダよ。大事な決断・告白・重要な話し合いはこの月を避けた方が賢明んダ。2人でゆっくり過ごすだけにして、動かない月にしてほしいんダよ🐼';
+        return 'この月は2人とも空亡月ンダ🐼 空亡は吉凶どちらのエネルギーも弱まる時期だから、2人の関係も穏やかになりやすいンダ。無理に前に進もうとせず、一緒にゆっくり過ごす時間を大切にするンダヨ🐼';
       }
       if (mo.kuubouState === 'mine') {
-        return 'この月はあなたの空亡月んダ。判断力が普段より落ちやすいから、大事な決断は相手に任せるか先延ばしにした方がいいんダよ。相手のサポートを素直に受け取ってほしいんダ🐼';
+        return 'この月はあなたの空亡月ンダ🐼 空亡は吉も凶もエネルギーが弱まる時期。運勢の波が穏やかになるから、大きな決断より内面を見つめる時間にするのがおすすめダヨ🐼';
       }
       if (mo.kuubouState === 'theirs') {
-        return 'この月は相手の空亡月んダ。相手の判断力が落ちやすく、気持ちも不安定になりやすい時期んダよ。あなたがサポート役に回って、相手を支えてあげてほしいんダ🐼';
+        return 'この月はお相手の空亡月ンダ🐼 空亡は良いことも悪いこともエネルギーが薄れる時期。相手のペースがゆっくりになりやすいから、焦らず見守ってあげることが大切ンダ🐼';
       }
 
       var s = mo.combined;
@@ -1927,12 +2005,12 @@ window._pfRunCompatScript = function() {
       // - BEST月・2位月は過去月でもグレーにしない（重要情報を隠さない）
       var isCurrent = mo.month === curMonth;
       var isPastRaw = mo.month < curMonth;
-      // 絶対値基準: ≥80=最高 / 70-79=いい / 55-69=ふつう / <55=注意
-      var isBest = s >= 80;
-      var isSecondBest = s >= 70 && s < 80;
+      // 最高: 12ヶ月中の最高スコア(同点含む) / いい:70+ / 注意:<55 / ふつう:55-69
+      var isBest = s === maxM.combined;
+      var isSecondBest = !isBest && s >= 70;
+      var isCaution = !isBest && s < 55;
       var isBestOrSecond = isBest || isSecondBest;
       var isWorst = mo.month === minM.month && s < 55;
-      var isCaution = s < 55;
       // 過去月の薄表示: BEST/いい時期/注意月は除外（重要情報を隠さない）
       var isPast = isPastRaw && !isCurrent && !isBestOrSecond && !isCaution;
 
@@ -1957,7 +2035,7 @@ window._pfRunCompatScript = function() {
 
       var desc = makeDesc(mo);
       var badge = '';
-      if(isBest)        badge='<span style="padding:4px 12px;border-radius:20px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);font-size:11px;color:rgba(232,208,120,.95);font-weight:700;letter-spacing:.05em;">✦ 最高の時期</span>';
+      if(isBest)        badge='<span style="padding:4px 12px;border-radius:20px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);font-size:11px;color:rgba(232,208,120,.95);font-weight:700;letter-spacing:.05em;">✦ 最高の時期</span><span style="margin-left:6px;font-size:10px;color:#aaaaaa;">（今年の暫定ベスト）</span>';
       else if(isSecondBest) badge='<span style="padding:4px 12px;border-radius:20px;background:rgba(100,200,80,.12);border:1px solid rgba(100,200,80,.35);font-size:11px;color:rgba(120,210,90,.95);font-weight:700;letter-spacing:.05em;">いい時期</span>';
       else if(isCaution) badge='<span style="padding:4px 12px;border-radius:20px;background:rgba(200,80,60,.12);border:1px solid rgba(200,80,60,.35);font-size:11px;color:rgba(210,100,80,.95);font-weight:700;letter-spacing:.05em;">注意が必要な時期</span>';
       var pastOpacity = isPast ? 'opacity:.45;filter:grayscale(.3);' : '';
@@ -1984,17 +2062,21 @@ window._pfRunCompatScript = function() {
           +(isCaution ? '　無理に動かず、お互いのペースを尊重することが大切ンダ🐼' : '')
           +'</div>'
           +(isBest ? '<div style="margin-top:8px;font-size:11px;color:rgba(201,168,76,.7);">あなたの運気スコア：'+mo.myScore+' / '+ptName+'のスコア：'+mo.ptScore+' / 相性スコア：'+mo.combined+'</div>' : '')
+          +(isBest && mo.tsuukanBonus > 0 ? '<div style="margin-top:6px;font-size:0.8em;color:#D4AF37;">⚖ 通関作用 +'+mo.tsuukanBonus+' ─ '+mo.tsuukanGogyo+'の気が2人の関係を調和させる月</div>' : '')
+          +(isBest && mo.juniunBonus > 0 ? '<div style="margin-top:6px;font-size:0.8em;color:#D4AF37;">⚡ 十二運相乗 +'+mo.juniunBonus+' ─ 2人とも勢いのある時期。行動を起こすのに最適ンダ</div>' : '')
+          +(isBest && mo.juniunBonus < 0 ? '<div style="margin-top:6px;font-size:0.8em;color:#aaaaaa;">🌙 十二運相乗 '+mo.juniunBonus+' ─ 2人ともエネルギーが穏やかな時期。ゆっくり過ごすのが吉</div>' : '')
+          +(isBest && mo.doubleChuu < 0 ? '<div style="margin-top:6px;font-size:0.8em;color:#cc6666;">⚠ 双方六冲 '+mo.doubleChuu+' ─ 2人ともエネルギーが衝突しやすい月。慎重に過ごすンダ</div>' : '')
           +'</div></div></div>';
       } else {
-        // シンプル行
+        // シンプル行（ふつう月: テキストは solid white で視認性を確保）
         html += '<div style="display:flex;gap:0;align-items:flex-start;margin-bottom:4px;'+pastOpacity+'">'
           +'<div style="width:52px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;padding-top:14px;position:relative;z-index:1;">'
           +'<div style="'+dotStyle+'"></div></div>'
           +'<div style="flex:1;padding:10px 0 10px 16px;border-bottom:1px solid rgba(255,255,255,.04);">'
           +'<div style="display:flex;align-items:center;gap:10px;">'
-          +'<span style="font-family:serif;font-size:16px;font-weight:700;color:'+labelColor+';min-width:34px;">'+MONTH_NAMES[mo.month-1]+'</span>'
-          +'<span style="font-size:11px;color:rgba(255,255,255,.3);">'+stars+'</span>'
-          +'<span style="font-size:11px;color:rgba(255,255,255,.3);">'+desc+'</span>'
+          +'<span style="font-family:serif;font-size:16px;font-weight:700;color:#ffffff;min-width:34px;">'+MONTH_NAMES[mo.month-1]+'</span>'
+          +'<span style="font-size:11px;color:#ffffff;">'+stars+'</span>'
+          +'<span style="font-size:11px;color:#ffffff;">'+desc+'</span>'
           +'</div></div></div>';
       }
     });
