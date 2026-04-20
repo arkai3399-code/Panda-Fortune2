@@ -309,8 +309,6 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
                   onChange={e => { setLang(e.target.value); }}>
                   <option value="jp">🇯🇵 日本語</option>
                   <option value="kr">🇰🇷 한국어</option>
-                  <option value="cn">🇨🇳 中文</option>
-                  <option value="en">🇺🇸 English</option>
                 </select>
                 <span className="pf-lang-select-arrow">▼</span>
               </div>

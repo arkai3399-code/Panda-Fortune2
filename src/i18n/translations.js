@@ -5,7 +5,7 @@
 //  翻訳キーはすべて日本語表記（元実装と同じ）。
 // ══════════════════════════════════════════════════════════════
 
-export const SUPPORTED_LANGS = ["jp", "kr", "cn", "en"];
+export const SUPPORTED_LANGS = ["jp", "kr"];
 export const DEFAULT_LANG = "jp";
 
 /**

@@ -10,6 +10,7 @@
 import { calcCompatDetail } from '../logic/compatCalcFull.js';
 import { MBTI_32_COMPAT, MBTI_PAIR_TEXTS_528, getMbtiIntro } from '../data/compatData.js';
 import { _getJuniunsei } from '../engines/meishikiEngine.js';
+import { GENMEI_TEXTS, getGenmei, getGenmeiTextsByLang } from '../data/genmeiText.js';
 
 // 外部参照互換
 window.MBTI_32_COMPAT = MBTI_32_COMPAT;
@@ -1336,7 +1337,22 @@ window._pfRunCompatScript = function() {
     var ptKakuType = (ptCalc.kakukyoku && ptCalc.kakukyoku.name && ptCalc.kakukyoku.name.indexOf('従旺') >= 0) ? '従旺格' : '普通格局';
     var ptProfileKey = ptNikchu + '_' + ptKakuType;
     var ptProfileText = NIKCHU_PROFILES[ptProfileKey] || NIKCHU_PROFILES[ptNikchu + '_普通格局'] || ptPersona.descThem;
-    if(elPtDesc)  elPtDesc.textContent  = ptProfileText;
+    if(elPtDesc) {
+      // 相手の元命テキスト（月柱蔵干本気 × 日干）を日柱プロフィールの後に1段落で繋げる
+      var ptGenmeiKey = getGenmei(ptCalc.pillars.day.kan, ptCalc.pillars.month.shi);
+      var _compatLang = (window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
+      var _genmeiTextsForCompat = getGenmeiTextsByLang(_compatLang);
+      var ptGenmeiData = ptGenmeiKey ? _genmeiTextsForCompat[ptGenmeiKey] : null;
+      if (ptGenmeiData) {
+        // 元命テキストの「あなた」(jp) / 「당신」(kr) を相手の名前に差し替え
+        var _replacePronoun = _compatLang === 'kr'
+          ? String(ptGenmeiData.text).replace(/당신/g, ptName)
+          : String(ptGenmeiData.text).replace(/あなた/g, ptName);
+        elPtDesc.textContent = ptProfileText + ' ' + _replacePronoun;
+      } else {
+        elPtDesc.textContent = ptProfileText;
+      }
+    }
 
     // 四柱グリッド更新
     var elPillars = document.getElementById('pf-pt-pillars');

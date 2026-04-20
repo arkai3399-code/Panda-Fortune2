@@ -6,6 +6,8 @@
 window.PF_LANG=(function(){
   var _l='jp';
   try{_l=localStorage.getItem('pf_lang')||'jp';}catch(e){}
+  // 対応言語を jp / kr のみに制限（cn/en が保存されていたら jp に戻す）
+  if (_l !== 'jp' && _l !== 'kr') { _l = 'jp'; try{localStorage.setItem('pf_lang','jp');}catch(e){} }
   var T={
     '基本命式':{kr:'기본 명식',cn:'基本命式',en:'Basic Chart'},
     '運勢タイムライン':{kr:'운세 타임라인',cn:'运势时间线',en:'Fortune Timeline'},
@@ -1240,9 +1242,10 @@ window.PF_LANG=(function(){
     if(root2)_obs.observe(root2,{childList:true,subtree:true});
   }
   function setLang(lang){
+    if (lang !== 'jp' && lang !== 'kr') lang = 'jp';
     _l=lang;
     try{localStorage.setItem('pf_lang',lang);}catch(e){}
-    document.documentElement.lang=lang==='jp'?'ja':lang==='cn'?'zh':lang==='kr'?'ko':'en';
+    document.documentElement.lang=lang==='kr'?'ko':'ja';
     // プルダウンのvalue更新
     var dd=document.getElementById('pf-lang-dd');
     if(dd) dd.value=lang;
@@ -1251,6 +1254,8 @@ window.PF_LANG=(function(){
       el.textContent=t(el.getAttribute('data-i18n'));
     });
     translateDOM(lang);
+    // React コンポーネントが言語変更を検知できるようカスタムイベントを発火
+    try { window.dispatchEvent(new CustomEvent('pf-lang-change', { detail: lang })); } catch(e){}
     if(lang!=='jp')startObs();
     else if(_obs){_obs.disconnect();_obs=null;}
   }

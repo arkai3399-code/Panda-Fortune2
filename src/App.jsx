@@ -13,6 +13,12 @@ import './index.css';
 import './data/translations.js';
 import './engines/mbtiEngineRaw.js';
 import './engines/meishikiEngineRaw.js';
+import { GENMEI_TEXTS, getGenmei, getGenmeiTextsByLang } from './data/genmeiText.js';
+import {
+  NIKCHU_SELF_PROFILES_KR, JUNIU_NATURE_KR,
+  buildGogyoText_KR, buildWeakText_KR, buildKakuDetailText_KR,
+  buildKiText_KR, buildJuniuNatureText_KR, buildDuText_KR,
+} from './data/meishikiTextsKr.js';
 import React from 'react';
 // NOTE: babel スクリプト本体は `const { useState, useEffect } = React` 形式でフックを取り出すため
 // named import は行わない（重複宣言エラー回避）。React も window に公開して compatScript からアクセス可能にする
@@ -3801,6 +3807,14 @@ const EditModal = ({ initialUi, onSave, onClose }) => {
 // ── メイン ──
 function FortuneResult() {
   const [activeTab, setActiveTab] = useState("meishiki");
+  // 言語変更時にコンポーネントを再レンダするためのティック（window.PF_LANG 経由）
+  const [_langTick, _setLangTick] = useState(0);
+  React.useEffect(() => {
+    const handler = () => _setLangTick(t => t + 1);
+    window.addEventListener('pf-lang-change', handler);
+    return () => window.removeEventListener('pf-lang-change', handler);
+  }, []);
+  const currentLang = (typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang) ? window.PF_LANG.getLang() : 'jp';
   const [openSections, setOpenSections] = useState({gogyo:false, kakukyoku:false, tsuhen:false, juniu:false});
   const [acctOpen, setAcctOpen] = useState({info:false, plan:false});
   const [showAcctMenu, setShowAcctMenu] = useState(false);
@@ -4045,8 +4059,6 @@ function FortuneResult() {
                   onChange={e => { if(window.PF_LANG) window.PF_LANG.setLang(e.target.value); }}>
                   <option value="jp">🇯🇵 日本語</option>
                   <option value="kr">🇰🇷 한국어</option>
-                  <option value="cn">🇨🇳 中文</option>
-                  <option value="en">🇺🇸 English</option>
                 </select>
                 <span className="pf-lang-select-arrow">▼</span>
               </div>
@@ -4325,7 +4337,10 @@ function FortuneResult() {
                   const myNikchu = calc.pillars.day.kan + calc.pillars.day.shi;
                   const myKakuType = (kakukyoku && kakukyoku.indexOf('従旺') >= 0) ? '従旺格' : '普通格局';
                   const myProfileKey = myNikchu + '_' + myKakuType;
-                  const baseProfile = NIKCHU_SELF_PROFILES[myProfileKey] || NIKCHU_SELF_PROFILES[myNikchu + '_普通格局'] || '';
+                  const baseProfileJa = NIKCHU_SELF_PROFILES[myProfileKey] || NIKCHU_SELF_PROFILES[myNikchu + '_普通格局'] || '';
+                  const baseProfileKr = NIKCHU_SELF_PROFILES_KR[myProfileKey] || NIKCHU_SELF_PROFILES_KR[myNikchu + '_普通格局'] || '';
+                  // KR データが空なら JA にフォールバック
+                  const baseProfile = (currentLang === 'kr' && baseProfileKr) ? baseProfileKr : baseProfileJa;
 
                   // 五行バランス：最強・最弱
                   const gv = M.gokyo;
@@ -4334,17 +4349,23 @@ function FortuneResult() {
                   ].sort((a,b)=>b.v-a.v);
                   const topG = gogyoArr[0];
                   const botG = gogyoArr[gogyoArr.length-1];
-                  const gogyoText = `命式全体を見ると「${topG.g}」のエネルギーが最も強く（${Math.round(topG.v)}点）、${topG.g==='木'?'成長・創造・共感':topG.g==='火'?'情熱・表現・行動力':topG.g==='土'?'安定・誠実・包容力':topG.g==='金'?'意志・美意識・決断':'知性・感受性・直感'}が個性の核になっているんダ。`;
-                  const weakText = botG.v === 0
-                    ? `逆に「${botG.g}」はゼロで、${botG.g==='木'?'柔軟性・共感':botG.g==='火'?'情熱・自己表現':botG.g==='土'?'安定・継続力':botG.g==='金'?'決断・意志力':'知性・直感'}の面が課題になりやすいんダよ。`
-                    : `「${botG.g}」が最も少ない（${Math.round(botG.v)}点）から、意識的に補うといいんダ。`;
+                  const gogyoText = (currentLang === 'kr')
+                    ? buildGogyoText_KR(topG)
+                    : `命式全体を見ると「${topG.g}」のエネルギーが最も強く（${Math.round(topG.v)}点）、${topG.g==='木'?'成長・創造・共感':topG.g==='火'?'情熱・表現・行動力':topG.g==='土'?'安定・誠実・包容力':topG.g==='金'?'意志・美意識・決断':'知性・感受性・直感'}が個性の核になっているんダ。`;
+                  const weakText = (currentLang === 'kr')
+                    ? buildWeakText_KR(botG)
+                    : (botG.v === 0
+                      ? `逆に「${botG.g}」はゼロで、${botG.g==='木'?'柔軟性・共感':botG.g==='火'?'情熱・自己表現':botG.g==='土'?'安定・継続力':botG.g==='金'?'決断・意志力':'知性・直感'}の面が課題になりやすいんダよ。`
+                      : `「${botG.g}」が最も少ない（${Math.round(botG.v)}点）から、意識的に補うといいんダ。`);
 
                   // 格局・喜忌神
                   const isJuou = kakukyoku && kakukyoku.indexOf('従旺') >= 0;
                   const kakuText = isJuou
                     ? `格局は「${kakukyoku}」——命式のエネルギーが一方向に集中した特別な型ンダ。`
                     : `格局は「普通格局」で、5つの五行がバランスよく命式に分布しているんダ。`;
-                  const kiText = ki ? `喜神は「${ki}」で、この気が流れてくる時期・場所・人が最大の追い風になるンダ。忌神「${kj}」の気が強い環境は消耗しやすいから注意が必要ンダよ。` : '';
+                  const kiText = (currentLang === 'kr')
+                    ? buildKiText_KR(ki, kj)
+                    : (ki ? `喜神は「${ki}」で、この気が流れてくる時期・場所・人が最大の追い風になるンダ。忌神「${kj}」の気が強い環境は消耗しやすいから注意が必要ンダよ。` : '');
 
                   // 通変星：最強
                   const tsSrc = (() => {
@@ -4371,9 +4392,11 @@ function FortuneResult() {
 
                   // 大運テキスト
                   // 普通格局の意味を充実
-                  const kakuDetailText = isJuou
-                    ? `格局は「${kakukyoku}」——命式のエネルギーが一方向に集中した特別な型ンダ。その五行の流れに乗って生きることで本来の力が最大化されるんダよ。`
-                    : `格局は「普通格局」——5つの五行が命式にバランスよく分布している型ンダ。これは「どんな状況でも対応できる柔軟性を持つ」ということで、特定の分野に特化した才能より、幅広い場面で力を発揮できる強さがあるんダよ。`;
+                  const kakuDetailText = (currentLang === 'kr')
+                    ? buildKakuDetailText_KR(isJuou, kakukyoku)
+                    : (isJuou
+                      ? `格局は「${kakukyoku}」——命式のエネルギーが一方向に集中した特別な型ンダ。その五行の流れに乗って生きることで本来の力が最大化されるんダよ。`
+                      : `格局は「普通格局」——5つの五行が命式にバランスよく分布している型ンダ。これは「どんな状況でも対応できる柔軟性を持つ」ということで、特定の分野に特化した才能より、幅広い場面で力を発揮できる強さがあるんダよ。`);
 
                   // 通変星の詳細テキスト
                   const TS_DETAIL2 = {
@@ -4405,16 +4428,26 @@ function FortuneResult() {
                     '胎':'生まれながらに「可能性を内包する気質」を持っているんダ。目に見えないところで力を育てていく性質があって、じっくり熟成させるほど本来の力が深まっていくんダよ。周りからは掴みどころがなく見えることもあるが、その内側には豊かな世界がある。',
                     '養':'生まれながらに「環境に育まれる気質」を持っているんダ。人や環境から力をもらいながら成長するタイプで、良い師・良い環境・良い仲間との縁が人生を豊かにしていくんダよ。',
                   };
-                  const juniuNatureText = dayUnsei ? `日柱の十二運星「${dayUnsei}」は、生まれ持った本質的な気質を示しているんダ。${JUNIU_NATURE[dayUnsei]||''}` : '';
+                  const juniuNatureText = (currentLang === 'kr')
+                    ? buildJuniuNatureText_KR(dayUnsei)
+                    : (dayUnsei ? `日柱の十二運星「${dayUnsei}」は、生まれ持った本質的な気質を示しているんダ。${JUNIU_NATURE[dayUnsei]||''}` : '');
 
                   // 大運テキストを充実
-                  const duText = duIki
-                    ? `そして今はちょうど喜神「${ki}」と大運が重なる追い風の時期ンダ。命式の強みが最大に発揮できるタイミングだから、積極的に動いていいんダよ。`
-                    : duImi
-                    ? `今は忌神「${kj}」が大運に流れている時期ンダ。命式にとって消耗しやすい流れだから、無理に攻めず守りを固めながら力を蓄える時期と考えるといいんダ。`
-                    : `今の大運は命式に対して中立な流れンダ。大きな追い風も逆風もない時期だから、焦らず自分のペースで着実に積み上げていくのが一番ンダよ。`;
+                  const duText = (currentLang === 'kr')
+                    ? buildDuText_KR(duIki, duImi, ki, kj)
+                    : (duIki
+                      ? `そして今はちょうど喜神「${ki}」と大運が重なる追い風の時期ンダ。命式の強みが最大に発揮できるタイミングだから、積極的に動いていいんダよ。`
+                      : duImi
+                      ? `今は忌神「${kj}」が大運に流れている時期ンダ。命式にとって消耗しやすい流れだから、無理に攻めず守りを固めながら力を蓄える時期と考えるといいんダ。`
+                      : `今の大運は命式に対して中立な流れンダ。大きな追い風も逆風もない時期だから、焦らず自分のペースで着実に積み上げていくのが一番ンダよ。`);
 
-                  const popoText = `${baseProfile ? baseProfile + ' ' : ''}${gogyoText}${weakText}${kakuDetailText}${kiText}${tsTextDetail}${juniuNatureText}${duText}`;
+                  // 元命（月柱蔵干本気 × 日干 の通変星）— 言語別テキストを取得
+                  const myGenmei = getGenmei(calc.pillars.day.kan, calc.pillars.month.shi);
+                  const _genmeiTexts = getGenmeiTextsByLang(currentLang);
+                  const myGenmeiData = myGenmei ? _genmeiTexts[myGenmei] : null;
+                  // 元命テキストがあれば tsTextDetail を置換、無ければ従来の通変星説明を残す
+                  const personaText = myGenmeiData ? myGenmeiData.text : tsTextDetail;
+                  const popoText = `${baseProfile ? baseProfile + ' ' : ''}${gogyoText}${weakText}${kakuDetailText}${kiText}${personaText}${juniuNatureText}${duText}`;
                   // 天干×格局で特性カードを決定（20パターン）、なければ五行ベースにフォールバック
                   const traitKey = calc.pillars.day.kan + '_' + myKakuType;
                   const activeTraits = NIKCHU_TRAITS[traitKey] || persona.traits;
