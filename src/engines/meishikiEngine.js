@@ -10,14 +10,10 @@ export const JUNISHI        = ['子','丑','寅','卯','辰','巳','午','未','
 export const JIKKAN_GOGYO   = ['木','木','火','火','土','土','金','金','水','水'];
 export const JUNISHI_GOGYO  = ['水','土','木','木','土','火','火','土','金','金','土','水'];
 
+import { getZokanList, getZokanWeighted } from '../data/genmeiText.js';
+
 const _SEI  = { 木:'火', 火:'土', 土:'金', 金:'水', 水:'木' };
 const _KOKU = { 木:'土', 火:'金', 土:'水', 金:'木', 水:'火' };
-
-const _ZOKAN = {
-  子:['壬','癸'], 丑:['己','癸','辛'], 寅:['甲','丙','戊'], 卯:['乙'],
-  辰:['戊','乙','癸'], 巳:['丙','庚','戊'], 午:['丁','己'], 未:['己','丁','乙'],
-  申:['庚','壬','戊'], 酉:['辛'], 戌:['戊','辛','丁'], 亥:['壬','甲'],
-};
 
 // 十二運星テーブル [日干][地支index]
 const _JUNIU_TBL = {
@@ -133,13 +129,18 @@ function _calcYearPillar(y, m, d, hUTC) {
 // 月柱: 定気法
 // ★修正: GOKORTON は 0=寅月 の index → step をそのまま使用
 //        月支の JUNISHI index には (step+2)%12 を使用（別変数に分離）
+//        節入り経過日数 (daysFromSetsu) を併せて返す（蔵干分野表での元命選定に使用）
 function _calcMonthPillar(y, m, d, hUTC, yKan) {
   const sl = _getSolarLon(_dateToJD(y, m, d, hUTC));
   const step = Math.floor(((sl - 315 + 360) % 360) / 30); // 0=寅月, 1=卯月...
   const shiIdx = (step + 2) % 12;                          // JUNISHI index (2=寅, 3=卯...)
   const monthKans = _GOKORTON[yKan];
   const kanIdx = JIKKAN.indexOf(monthKans[step]);          // GOKORTONはstepで引く
-  return { kan: JIKKAN[kanIdx], shi: JUNISHI[shiIdx], kanIdx, shiIdx };
+  // 節入り経過日数（黄経差を太陽1日あたりの平均移動量 0.9856°/日 で割って近似）
+  const startLon = (315 + step * 30) % 360;
+  const deltaLon = (((sl - startLon) % 360) + 360) % 360;
+  const daysFromSetsu = deltaLon / (360 / 365.2422);
+  return { kan: JIKKAN[kanIdx], shi: JUNISHI[shiIdx], kanIdx, shiIdx, daysFromSetsu };
 }
 
 // 時柱
@@ -153,11 +154,16 @@ function _calcHourPillar(hourInput, dayKan) {
 // ── 十神・十二運星 ───────────────────────────────────────────
 function _getJisshin(niIdx, tiIdx) {
   const ng = JIKKAN_GOGYO[niIdx], tg = JIKKAN_GOGYO[tiIdx], s = (niIdx % 2) === (tiIdx % 2);
+  // _SEI[X]=Xが生む先, _KOKU[X]=Xが剋す先
+  //   _SEI[ng]===tg → 我生 → 食神/傷官
+  //   _KOKU[ng]===tg→ 我克 → 偏財/正財
+  //   _SEI[tg]===ng → 生我（対象が私を生む）→ 偏印/正印
+  //   _KOKU[tg]===ng→ 克我（対象が私を剋す）→ 偏官/正官
   if (ng === tg) return s ? '比肩' : '劫財';
   if (_SEI[ng]  === tg) return s ? '食神' : '傷官';
   if (_KOKU[ng] === tg) return s ? '偏財' : '正財';
-  if (_SEI[tg]  === ng) return s ? '偏官' : '正官';
-  if (_KOKU[tg] === ng) return s ? '偏印' : '正印';
+  if (_SEI[tg]  === ng) return s ? '偏印' : '正印';
+  if (_KOKU[tg] === ng) return s ? '偏官' : '正官';
   return '比肩';
 }
 
@@ -166,15 +172,19 @@ export function _getJuniunsei(nKan, shiIdx) {
 }
 
 // ── 五行バランス ─────────────────────────────────────────────
+// 蔵干分野表 (genmeiText.js _ZOKAN_ALLOCATION) を唯一のソースとして
+// 本気=0.5 / 中気=0.3 / 余気=0.2 で加重する。中気を持たない月支
+// （子卯酉）は本気 0.5 + 余気 0.2 のみで合計 0.7。
 function _calcGokyo(pillarsArr) {
   const sc = { 木:0, 火:0, 土:0, 金:0, 水:0 };
   for (const p of pillarsArr) {
     sc[JIKKAN_GOGYO[p.kanIdx]] += 1;
     sc[JUNISHI_GOGYO[p.shiIdx]] += 1;
-    const zk = _ZOKAN[JUNISHI[p.shiIdx]] || [];
-    if (zk[0]) sc[JIKKAN_GOGYO[JIKKAN.indexOf(zk[0])]] += 0.5;
-    if (zk[1]) sc[JIKKAN_GOGYO[JIKKAN.indexOf(zk[1])]] += 0.3;
-    if (zk[2]) sc[JIKKAN_GOGYO[JIKKAN.indexOf(zk[2])]] += 0.2;
+    const wz = getZokanWeighted(JUNISHI[p.shiIdx]);
+    for (const z of wz) {
+      const idx = JIKKAN.indexOf(z.kan);
+      if (idx >= 0) sc[JIKKAN_GOGYO[idx]] += z.weight;
+    }
   }
   return {
     木: Math.round(sc['木'] * 10) / 10,
@@ -277,9 +287,11 @@ export function calcMeishiki(input) {
     ...p,
     jisshin:   i === 2 ? '─（日主）' : _getJisshin(dP.kanIdx, p.kanIdx),
     juniunsei: _getJuniunsei(dP.kan, p.shiIdx),
-    zokan:     _ZOKAN[JUNISHI[p.shiIdx]] || [],
+    zokan:     getZokanList(JUNISHI[p.shiIdx]),
     gogyoKan:  JIKKAN_GOGYO[p.kanIdx],
     gogyoShi:  JUNISHI_GOGYO[p.shiIdx],
+    // 月柱のみ daysFromSetsu を保持（元命選定用）
+    ...(p.daysFromSetsu !== undefined ? { daysFromSetsu: p.daysFromSetsu } : {}),
   }));
   const { name: kkName, kishin, kijin } = _calcKakukyoku(gokyo, dP.kan);
   const allShis = arr.map(p => p.shi);
@@ -287,6 +299,18 @@ export function calcMeishiki(input) {
   const daiunList = _calcDaiunList(mP.kanIdx, mP.shiIdx, yP.kan, gender);
   const currentAge = new Date().getFullYear() - year;
   const currentDaiun = daiunList.find(d => currentAge >= d.ageFrom && currentAge <= d.ageTo) || daiunList[0];
+
+  // ── 空亡（旬の最後の2支）───────────────────────────────────
+  const kuubou = _calcKuubou(dP.kanIdx, dP.shiIdx);
+  const kuubouType = kuubou[0] + kuubou[1] + '空亡';
+
+  // ── 最強通変星 (topGod) ────────────────────────────────────
+  // 全柱の天干通変星(+1) + 全柱の蔵干通変星(本気0.5/中気0.3/余気0.2) を集計、
+  // 最大スコアのものを topGod とする（日柱の天干 = 自分自身なので除外）
+  const { topGod, jisshinCount } = _calcTopGod(arr, dP);
+
+  // ── 空亡期 (今後 rangeYears 年で空亡支に当たる年のリスト) ──
+  const voidYearsUpcoming = _calcVoidYearsUpcoming(kuubou, new Date().getFullYear(), 10);
 
   return {
     input: {
@@ -308,8 +332,80 @@ export function calcMeishiki(input) {
     daiunList,
     currentDaiun,
     tokuseiboshi,
+    kuubou,
+    kuubouType,
+    topGod,
+    jisshinCount,
+    voidYearsUpcoming,
     mbti,
   };
+}
+
+// ──────────────────────────────────────────────────────────────
+// 共有ヘルパー: 空亡 / 最強通変星 / 空亡期
+// ──────────────────────────────────────────────────────────────
+
+/**
+ * 空亡 = 旬の最後の2支
+ * 日干index と 日支index から旬の起点を逆算し、起点+10, +11 の2支を返す。
+ * @param {number} kanIdx 日干 index (0=甲)
+ * @param {number} shiIdx 日支 index (0=子)
+ * @returns {[string, string]}
+ */
+function _calcKuubou(kanIdx, shiIdx) {
+  const junStartShiIdx = (shiIdx - kanIdx + 12) % 12;
+  return [
+    JUNISHI[(junStartShiIdx + 10) % 12],
+    JUNISHI[(junStartShiIdx + 11) % 12],
+  ];
+}
+
+/**
+ * 最強通変星を集計。
+ *   各柱の天干通変星: +1
+ *   各柱の蔵干通変星: 蔵干分野表で本気=0.5 / 中気=0.3 / 余気=0.2 加重
+ * 日柱の天干（=日主）は集計対象外。
+ * @returns {{ topGod: string|null, jisshinCount: Object<string, number> }}
+ */
+function _calcTopGod(pillarsArr, dP) {
+  const cnt = {};
+  for (const p of pillarsArr) {
+    // 天干通変星（日柱は日主自身なのでスキップ）
+    if (p !== dP) {
+      const t = _getJisshin(dP.kanIdx, p.kanIdx);
+      if (t) cnt[t] = (cnt[t] || 0) + 1;
+    }
+    // 蔵干通変星（節入り日数の重み付け）
+    const wz = getZokanWeighted(JUNISHI[p.shiIdx]);
+    for (const z of wz) {
+      const ti = JIKKAN.indexOf(z.kan);
+      if (ti < 0) continue;
+      const t = _getJisshin(dP.kanIdx, ti);
+      if (t) cnt[t] = (cnt[t] || 0) + z.weight;
+    }
+  }
+  const sorted = Object.entries(cnt).sort((a, b) => b[1] - a[1]);
+  // スコアを小数1位で丸める（表示・debug 用）
+  const rounded = {};
+  for (const [k, v] of Object.entries(cnt)) rounded[k] = Math.round(v * 10) / 10;
+  return { topGod: sorted.length ? sorted[0][0] : null, jisshinCount: rounded };
+}
+
+/**
+ * 指定期間内で空亡支に該当する年（年支 = 空亡支のいずれか）を抽出。
+ * @param {string[]} kuubou - 空亡支2つ 例:['申','酉']
+ * @param {number} currentYear - 基準年
+ * @param {number} rangeYears - 検索範囲（デフォルト10年、currentYear から currentYear+rangeYears まで）
+ * @returns {number[]} 空亡年のリスト
+ */
+function _calcVoidYearsUpcoming(kuubou, currentYear, rangeYears = 10) {
+  if (!Array.isArray(kuubou) || kuubou.length === 0) return [];
+  const out = [];
+  for (let y = currentYear; y <= currentYear + rangeYears; y++) {
+    const shi = JUNISHI[((y - 4) % 12 + 12) % 12];
+    if (kuubou.indexOf(shi) >= 0) out.push(y);
+  }
+  return out;
 }
 
 // ══════════════════════════════════════════════════════════════

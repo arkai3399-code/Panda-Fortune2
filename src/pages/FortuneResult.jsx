@@ -15,6 +15,7 @@ import {
 import { useLang } from '../i18n/useLang.js';
 import { langPick } from '../i18n/templateHelpers.js';
 import * as AT from '../data/appTemplatesKr.js';
+import { getZokanList, getMonthZokan } from '../data/genmeiText.js';
 import { getStarDescByLang, buildStarFallback_JA, buildStarFallback_KR, getKuubouDescByLang, getTsuhenInfoByLang } from '../data/meishikiInlineDescs.js';
 import TodayFortuneBlock from '../components/blocks/TodayFortuneBlock.jsx';
 import HalfYearBlock from '../components/blocks/HalfYearBlock.jsx';
@@ -372,7 +373,8 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
               { id: "timeline", label: "運勢タイムライン", icon: "📅",  premium: false },
               { id: "compat",   label: "相性占い",         icon: "💞",  premium: "LIGHT" },
               { id: "aichat",   label: "ポポに聞く",       icon: "🐼",  premium: "LIGHT" },
-              { id: "expert",   label: "専門家に相談",     icon: "👨‍🏫", premium: "COMING" },
+              // 韓国語モードでは専門家に相談タブを非表示
+              ...((typeof window !== 'undefined' && window.PF_LANG && window.PF_LANG.getLang && window.PF_LANG.getLang() === 'kr') ? [] : [{ id: "expert", label: "専門家に相談", icon: "👨‍🏫", premium: "COMING" }]),
 
             ].map(t => (
               <div key={t.id} style={{ position: "relative" }}>
@@ -724,7 +726,11 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
                   {M.pillars.map((p, i) => {
                     const isDay = i === 2;
+                    const isMonth = i === 1;
                     const zokan = M.zokan[i]?.zokan || [];
+                    const genmeiKan = isMonth
+                      ? getMonthZokan(p.shi, M._calc?.pillars?.month?.daysFromSetsu)
+                      : null;
                     const GOGYO_COLOR = { '木':'#7EC87A','火':'#E8745A','土':'#C9A84C','金':'#B8C8E0','水':'#6EB4DC' };
                     const JIKKAN_G2 = ['木','木','火','火','土','土','金','金','水','水'];
                     const JIKKAN_L2 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
@@ -789,14 +795,28 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
                           <p style={{ fontSize: 12, color: C.textMuted }}>{p.unsei || "—"}</p>
                         </div>
 
-                        {/* 蔵干 */}
+                        {/* 蔵干（月柱は元命に該当する蔵干をゴールドで強調） */}
                         <div style={{ padding: "8px 6px 12px", textAlign: "center" }}>
                           <p style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", marginBottom: 6, letterSpacing: "0.1em" }}>蔵干</p>
                           <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "center" }}>
-                            {zokan.map((k, ki) => (
-                              <span key={ki} style={{ fontSize: 11, color: C.textMuted, fontFamily: "'Shippori Mincho',serif" }}>{k}</span>
-                            ))}
+                            {zokan.map((k, ki) => {
+                              const isGenmei = isMonth && k === genmeiKan;
+                              return (
+                                <span key={ki} style={{
+                                  fontSize: isGenmei ? 13 : 11,
+                                  color: isGenmei ? C.gold : C.textMuted,
+                                  fontFamily: "'Shippori Mincho',serif",
+                                  fontWeight: isGenmei ? 700 : 400,
+                                  letterSpacing: isGenmei ? '0.05em' : 'normal',
+                                }} title={isGenmei ? '元命（月支採用蔵干）' : undefined}>
+                                  {isGenmei ? '★' + k : k}
+                                </span>
+                              );
+                            })}
                           </div>
+                          {isMonth && genmeiKan && (
+                            <p style={{ fontSize: 8, color: C.gold, opacity: 0.7, marginTop: 4, letterSpacing: '0.05em' }}>★=元命</p>
+                          )}
                         </div>
                       </div>
                     );
@@ -1209,18 +1229,26 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
                   const JIKKAN_KK  = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
                   const JIKKAN_G   = ['木','木','火','火','土','土','金','金','水','水'];
                   const JUNISHI_KK = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
-                  const ZOKAN_MAP  = {子:['壬','癸'],丑:['己','癸','辛'],寅:['甲','丙','戊'],卯:['乙'],辰:['戊','乙','癸'],巳:['丙','庚','戊'],午:['丁','己'],未:['己','丁','乙'],申:['庚','壬','戊'],酉:['辛'],戌:['戊','辛','丁'],亥:['壬','甲']};
+                  // 蔵干分野表 (genmeiText.js _ZOKAN_ALLOCATION) を単一ソースとして参照
+                  const ZOKAN_MAP  = {
+                    子: getZokanList('子'), 丑: getZokanList('丑'), 寅: getZokanList('寅'),
+                    卯: getZokanList('卯'), 辰: getZokanList('辰'), 巳: getZokanList('巳'),
+                    午: getZokanList('午'), 未: getZokanList('未'), 申: getZokanList('申'),
+                    酉: getZokanList('酉'), 戌: getZokanList('戌'), 亥: getZokanList('亥'),
+                  };
                   const SEI_KK  = {木:'火',火:'土',土:'金',金:'水',水:'木'};
                   const KOKU_KK = {木:'土',火:'金',土:'水',金:'木',水:'火'};
                   function getTsuhen(niKan, tiKan) {
+                    // SEI[tg]===ng → 生我 → 偏印/正印
+                    // KOKU[tg]===ng→ 克我 → 偏官/正官
                     const ni = JIKKAN_KK.indexOf(niKan), ti = JIKKAN_KK.indexOf(tiKan);
                     if (ni < 0 || ti < 0) return '─';
                     const ng = JIKKAN_G[ni], tg = JIKKAN_G[ti], s = (ni%2)===(ti%2);
                     if (ng===tg) return s?'比肩':'劫財';
                     if (SEI_KK[ng]===tg) return s?'食神':'傷官';
                     if (KOKU_KK[ng]===tg) return s?'偏財':'正財';
-                    if (SEI_KK[tg]===ng) return s?'偏官':'正官';
-                    if (KOKU_KK[tg]===ng) return s?'偏印':'正印';
+                    if (SEI_KK[tg]===ng) return s?'偏印':'正印';
+                    if (KOKU_KK[tg]===ng) return s?'偏官':'正官';
                     return '比肩';
                   }
                   const dayKan = pillars.day.kan;
@@ -1240,23 +1268,22 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
                     const zk = ZOKAN_MAP[r.shi] || [];
                     return zk.map(k => ({ kan: k, ts: getTsuhen(dayKan, k) }));
                   });
-                  // 全通変星の集計（出所も記録）
-                  const tsCount = {};
+                  // 出所トラッキング（どの柱から来た星か） — UI 表示専用
                   const tsSources = {}; // {星名: [{label, kan, type:'天干'|'蔵干'}]}
                   pillarRows.forEach((r, i) => {
                     if (!r.isDay) {
                       const ts = kanTsuhen[i];
-                      tsCount[ts] = (tsCount[ts]||0)+1;
                       if (!tsSources[ts]) tsSources[ts] = [];
                       tsSources[ts].push({ label:r.label, kan:r.kan, type:'天干' });
                     }
                     zokanTsuhen[i].forEach(z => {
-                      tsCount[z.ts] = (tsCount[z.ts]||0)+0.5;
                       if (!tsSources[z.ts]) tsSources[z.ts] = [];
                       tsSources[z.ts].push({ label:r.label, kan:z.kan, type:'蔵干' });
                     });
                   });
-                  const sortedTs = Object.entries(tsCount).filter(([k])=>k!=='─').sort((a,b)=>b[1]-a[1]);
+                  // ランキングはエンジンが算出済 (calc.jisshinCount = 蔵干分野表加重)
+                  const tsCount = (M._calc && M._calc.jisshinCount) ? M._calc.jisshinCount : {};
+                  const sortedTs = Object.entries(tsCount).filter(([k])=>k!=='─（日主）'&&k!=='─').sort((a,b)=>b[1]-a[1]);
                   return (
                     <>
                       {/* ポポコメント */}

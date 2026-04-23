@@ -4,6 +4,7 @@ import { POPO_CATS, POPO_STORAGE_KEY, POPO_EXPIRE_MS } from '../../data/popo.js'
 import { calcDailyScore } from '../../logic/fortuneCalc.js';
 import { getGogyoTraitsByLang } from '../../data/meishikiSharedTexts.js';
 import * as ACK from '../../data/aiChatKr.js';
+import { translatePopoAnswer } from '../../data/popoAnswersKr.js';
 import SectionLabel from '../common/SectionLabel.jsx';
 import Card from '../common/Card.jsx';
 import PandaIcon from '../common/PandaIcon.jsx';
@@ -550,12 +551,11 @@ function loadPopoMsgs() {
     var data = JSON.parse(raw);
     if (!data || !Array.isArray(data.msgs) || data.msgs.length === 0) return null;
     var now = Date.now();
-    // 最初のメッセージ（ポポ挨拶）は常に残す。それ以降を72時間で削除
-    var initial = data.msgs[0];
+    // 最初のメッセージ（ポポ挨拶）は常に最新言語で再生成。それ以降を72時間で削除
     var rest = data.msgs.slice(1).filter(function(m) {
       return !m.sentAt || (now - m.sentAt) < POPO_EXPIRE_MS;
     });
-    return [initial].concat(rest);
+    return [/* placeholder; caller will prepend a fresh initial */].concat(rest);
   } catch(e) { return null; }
 }
 
@@ -579,13 +579,33 @@ const AiChatTab = ({ meishiki }) => {
   const M = meishiki;
 
   // 初期化：localStorageから復元 or 新規
+  // 挨拶（msgs[0]）は常に現在の言語で再生成し、ユーザー会話履歴のみ保存から復元
   const [msgs, setMsgs] = useState(function() {
     var saved = loadPopoMsgs();
-    return saved || makeInitialMessages(M);
+    var initial = makeInitialMessages(M)[0];
+    if (saved && saved.length > 0) return [initial].concat(saved.slice(1));
+    return [initial];
   });
+
+  // 言語切替時に挨拶を再生成（ユーザー会話履歴は保持）
+  useEffect(function() {
+    if (_langTick === 0) return;
+    setMsgs(function(prev) {
+      var fresh = makeInitialMessages(M)[0];
+      return [fresh].concat(prev.slice(1));
+    });
+  }, [_langTick]);
   const [input, setInput] = useState("");
   const [cat, setCat]     = useState(0);
+  const [_langTick, setLangTick] = useState(0);
   const bottomRef         = React.useRef(null);
+
+  // 言語切替を検知して再レンダリング（quick質問/placeholder/header subtext を更新するため）
+  useEffect(function() {
+    function onLangChange() { setLangTick(function(n){ return n + 1; }); }
+    window.addEventListener('pf-lang-change', onLangChange);
+    return function() { window.removeEventListener('pf-lang-change', onLangChange); };
+  }, []);
 
   // msgs が変わるたびに localStorage へ保存
   useEffect(function() {
@@ -622,10 +642,19 @@ const AiChatTab = ({ meishiki }) => {
     savePopoMsgs(fresh);
   };
 
-  const send = function(text) {
-    if (!text || !text.trim()) return;
-    var trimmed = text.trim();
-    var answer = generatePopoAnswer(M, trimmed);
+  // displayText = ユーザーバブルに表示するテキスト（KR/JA）
+  // backendQuery = generatePopoAnswer に渡す JA テキスト（パターンマッチ用）
+  // 自由入力時は両方同じ。クイック質問ボタンからは別々に渡される。
+  const send = function(displayText, backendQuery) {
+    if (!displayText || !displayText.trim()) return;
+    var trimmed = displayText.trim();
+    var query = (backendQuery || trimmed).trim();
+    var answer = generatePopoAnswer(M, query);
+    // KR モードでは翻訳辞書で後処理して韓国語化
+    if (ACK.getLang() === 'kr') {
+      try { answer = translatePopoAnswer(answer); }
+      catch (e) { console.warn('[AiChatTab] translatePopoAnswer failed:', e.message); }
+    }
     var now = Date.now();
     setMsgs(function(prev) {
       return prev.concat([
@@ -676,13 +705,19 @@ const AiChatTab = ({ meishiki }) => {
 
         {/* クイック質問ボタン */}
         <div style={{ flexShrink:0, display:"flex", flexWrap:"wrap", gap:6, marginBottom:12 }}>
-          {qs.map(function(q, i){
-            return (
-              <button key={i} onClick={function(){ send(q); }} style={{ padding:"6px 14px", borderRadius:20, cursor:"pointer", background:curCat.bg, border:"1px solid " + curCat.border, color:curCat.color, fontSize:12, transition:"all 0.2s" }}>
-                {q}
-              </button>
-            );
-          })}
+          {(function(){
+            var _qLang = ACK.getLang();
+            return qs.map(function(q, i){
+              // 後方互換: 古い文字列形式 (string) と新形式 ({ja, kr}) の両方を許容
+              var label = (typeof q === 'string') ? q : (_qLang === 'kr' ? q.kr : q.ja);
+              var backend = (typeof q === 'string') ? q : q.ja;
+              return (
+                <button key={i} onClick={function(){ send(label, backend); }} style={{ padding:"6px 14px", borderRadius:20, cursor:"pointer", background:curCat.bg, border:"1px solid " + curCat.border, color:curCat.color, fontSize:12, transition:"all 0.2s" }}>
+                  {label}
+                </button>
+              );
+            });
+          })()}
         </div>
 
         {/* メッセージ一覧 */}

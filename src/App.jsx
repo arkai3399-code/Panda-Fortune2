@@ -10,10 +10,11 @@
 //    - window._pfShowCompat etc → ./compat/compatScript.js
 // ══════════════════════════════════════════════════════════════
 import './index.css';
+import './styles/mobileChart.css';
 import './data/translations.js';
 import './engines/mbtiEngineRaw.js';
 import './engines/meishikiEngineRaw.js';
-import { GENMEI_TEXTS, getGenmei, getGenmeiTextsByLang } from './data/genmeiText.js';
+import { GENMEI_TEXTS, getGenmei, getGenmeiTextsByLang, getZokanList, getMonthZokan } from './data/genmeiText.js';
 import {
   getGogyoTraitsByLang,
   getJuniuInfoShort,
@@ -22,6 +23,8 @@ import {
 import { langPick, tt } from './i18n/templateHelpers.js';
 import * as AT from './data/appTemplatesKr.js';
 import { getStarDescByLang, buildStarFallback_JA, buildStarFallback_KR, getKuubouDescByLang, getTsuhenInfoByLang } from './data/meishikiInlineDescs.js';
+import * as ACK from './data/aiChatKr.js';
+import { translatePopoAnswer } from './data/popoAnswersKr.js';
 import {
   NIKCHU_SELF_PROFILES_KR, JUNIU_NATURE_KR,
   buildGogyoText_KR, buildWeakText_KR, buildKakuDetailText_KR,
@@ -2694,11 +2697,10 @@ function generatePopoAnswer(M, question) {
   // ──────────────────────────────────────────────────────
   // デフォルト
   // ──────────────────────────────────────────────────────
-  return "「" + q + "」について答えるンダよ🐼" + NL + NL +
-    "あなたの命式（" + kan + shi + "日主・" + kaku + "）から見ると——" + NL +
-    "喜神「" + ki + "」が流れてくる時期や場所・人に身を置くことが一番の開運のカギンダよ。" + NL +
-    "忌神「" + kj + "」が強まる時期は無理せず守りに入って、喜神の時期に思い切り動く。" + NL +
-    "今の大運「" + duStr + "」は" + (duIsKi ? "吉の流れンダ。今こそ動き時ンダよ🐼" : duIsKj ? "守りの時期ンダ。土台固めに集中するといいんダよ🐼" : "中立の流れンダ。着実に積み上げるといいんダよ🐼");
+  if (ACK.getLang() === 'kr') {
+    return ACK.buildDefaultAnswer_KR(q, kan, shi, kaku, ki, kj, duStr, duIsKi, duIsKj);
+  }
+  return ACK.buildDefaultAnswer_JA(q, kan, shi, kaku, ki, kj, duStr, duIsKi, duIsKj);
 }
 
 
@@ -2716,39 +2718,18 @@ function makeInitialMessages(M) {
   var mbti  = (M._ui && M._ui.mbti) || "";
   var du    = calc.currentDaiun || null;
   var duStr = du ? du.kan + du.shi : "";
-  var NL = "\n";
   var JIKKAN_G  = {"甲":"木","乙":"木","丙":"火","丁":"火","戊":"土","己":"土","庚":"金","辛":"金","壬":"水","癸":"水"};
   var kanGogyo  = JIKKAN_G[kan]  || "水";
-  var GOGYO_OPEN = {
-    "木": "しなやかで好奇心旺盛な木の気を持つ人ンダよ🌱",
-    "火": "情熱と行動力にあふれた火の気を持つ人ンダよ🔥",
-    "土": "揺るぎない安定感を持つ土の気の人ンダよ🌍",
-    "金": "高い意志と美意識を持つ金の気の人ンダよ💎",
-    "水": "深い思慮と感受性を持つ水の気の人ンダよ🌊",
-  };
-  var moJisshin = (mo && mo.jisshin) ? "月柱の十神「" + mo.jisshin + "」が社会での動き方に影響しているンダ。" : "";
-  var duComment = duStr ? "今は大運「" + duStr + "」の時期——" +
-    (calc.kishin && du && calc.kishin.includes(JIKKAN_G[du.kan]) ?
-      "喜神と重なる吉の流れの中にいるンダ🐼" :
-      calc.kijin && du && calc.kijin.includes(JIKKAN_G[du.kan]) ?
-      "少し守りを意識しながら動く時期ンダ🐼" :
-      "着実に積み上げていく時期ンダ🐼"
-    ) : "";
-  var mbtiComment = mbti ? "MBTIの「" + mbti + "」と命式が重なると、" +
-    (kanGogyo === "水" || kanGogyo === "木" ? "感受性と直感力が際立つ個性" :
-     kanGogyo === "火" ? "情熱と表現力が突出した個性" :
-     kanGogyo === "金" ? "意志の強さと美意識が光る個性" : "包容力と安定感が際立つ個性") +
-    "になるんダよ。" : "";
-  var text = "こんにちはンダ🐼 ポポだよ！あなたの命式、ちゃんと全部読んだんダ。" + NL + NL +
-    "日主「" + kan + shi + "」——" + (GOGYO_OPEN[kanGogyo] || "") + NL +
-    "格局は「" + kaku + "」で、喜神「" + ki + "」が追い風、忌神「" + kj + "」が向かい風ンダ。" + NL +
-    (moJisshin ? moJisshin + NL : "") +
-    (mbtiComment ? mbtiComment + NL : "") +
-    (duComment ? duComment + NL : "") + NL +
-    "命式・今日の運勢・相性のこと、なんでも聞いてほしいんダよ。下のボタンから選んでもいいし、直接入力してもOKンダ🐼";
+  var _imLang = ACK.getLang();
+  var moJisshin   = _imLang === 'kr' ? ACK.buildMoJisshin_KR(mo && mo.jisshin) : ACK.buildMoJisshin_JA(mo && mo.jisshin);
+  var duComment   = _imLang === 'kr' ? ACK.buildDuComment_KR(duStr, calc.kishin, calc.kijin, du, JIKKAN_G) : ACK.buildDuComment_JA(duStr, calc.kishin, calc.kijin, du, JIKKAN_G);
+  var mbtiComment = _imLang === 'kr' ? ACK.buildMbtiComment_KR(mbti, kanGogyo) : ACK.buildMbtiComment_JA(mbti, kanGogyo);
+  var greetOpts   = { kan: kan, shi: shi, kaku: kaku, ki: ki, kj: kj, mbti: mbti, kanGogyo: kanGogyo, moJisshin: moJisshin, mbtiComment: mbtiComment, duComment: duComment };
+  var text = _imLang === 'kr' ? ACK.buildInitialGreeting_KR(greetOpts) : ACK.buildInitialGreeting_JA(greetOpts);
   return [{ role: "popo", text: text }];
 }
 
+// 質問は {ja, kr} ペア形式。表示には q[lang]、generatePopoAnswer 入力には q.ja を使う
 const POPO_CATS = [
   {
     label: "命式を知る", color: "rgba(201,168,76,0.85)", bg: "rgba(201,168,76,0.08)", border: "rgba(201,168,76,0.3)",
@@ -2758,12 +2739,12 @@ const POPO_CATS = [
       var ki = ((M._calc && M._calc.kishin) || []).join("・");
       var kj = ((M._calc && M._calc.kijin)  || []).join("・");
       return [
-        "私の命式を一言で教えて",
-        "格局「" + M.kakukyoku + "」の意味を詳しく教えて",
-        "喜神「" + ki + "」の活かし方は？",
-        "忌神「" + kj + "」を避けるには？",
-        "日主「" + kan + shi + "」の特徴は？",
-        "私の五行バランスから何が分かる？",
+        { ja: "私の命式を一言で教えて",                       kr: "내 명식을 한마디로 알려줘" },
+        { ja: "格局「" + M.kakukyoku + "」の意味を詳しく教えて", kr: "격국 \"" + M.kakukyoku + "\"의 의미를 자세히 알려줘" },
+        { ja: "喜神「" + ki + "」の活かし方は？",              kr: "희신 \"" + ki + "\"를 활용하는 방법은?" },
+        { ja: "忌神「" + kj + "」を避けるには？",              kr: "기신 \"" + kj + "\"을(를) 피하려면?" },
+        { ja: "日主「" + kan + shi + "」の特徴は？",           kr: "일주 \"" + kan + shi + "\"의 특징은?" },
+        { ja: "私の五行バランスから何が分かる？",                kr: "내 오행 밸런스에서 무엇을 알 수 있어?" },
       ];
     }
   },
@@ -2773,24 +2754,24 @@ const POPO_CATS = [
       var du = M._calc && M._calc.currentDaiun;
       var duStr = du ? du.kan + du.shi : "大運";
       return [
-        "今日の運勢を詳しく教えて",
-        "今日の恋愛運のアドバイスは？",
-        "今日の仕事運のアドバイスは？",
-        "今日の金運のアドバイスは？",
-        "今の大運「" + duStr + "」の意味は？",
-        "今年はどんな年？",
+        { ja: "今日の運勢を詳しく教えて",                  kr: "오늘의 운세를 자세히 알려줘" },
+        { ja: "今日の恋愛運のアドバイスは？",              kr: "오늘의 연애운 조언은?" },
+        { ja: "今日の仕事運のアドバイスは？",              kr: "오늘의 업무운 조언은?" },
+        { ja: "今日の金運のアドバイスは？",                kr: "오늘의 금전운 조언은?" },
+        { ja: "今の大運「" + duStr + "」の意味は？",       kr: "지금의 대운 \"" + duStr + "\"의 의미는?" },
+        { ja: "今年はどんな年？",                         kr: "올해는 어떤 해야?" },
       ];
     }
   },
   {
     label: "相性占い", color: "rgba(224,96,122,0.85)", bg: "rgba(224,96,122,0.08)", border: "rgba(224,96,122,0.3)",
     questions: function(M) { return [
-      "私と相性のいい人の特徴は？",
-      "五行の相生・相剋が相性に与える影響は？",
-      "支合・干合が恋愛に与える影響は？",
-      "六冲が恋愛に与える影響は？",
-      "忌神と喜神が一致する相手との関係は？",
-      "MBTI×命式で見る相性とは？",
+      { ja: "私と相性のいい人の特徴は？",                kr: "나와 궁합이 좋은 사람의 특징은?" },
+      { ja: "五行の相生・相剋が相性に与える影響は？",     kr: "오행의 상생・상극이 궁합에 미치는 영향은?" },
+      { ja: "支合・干合が恋愛に与える影響は？",           kr: "지지합・천간합이 연애에 미치는 영향은?" },
+      { ja: "六冲が恋愛に与える影響は？",                kr: "육충(六冲)이 연애에 미치는 영향은?" },
+      { ja: "忌神と喜神が一致する相手との関係は？",       kr: "기신과 희신이 일치하는 상대와의 관계는?" },
+      { ja: "MBTI×命式で見る相性とは？",                kr: "MBTI × 명식으로 보는 궁합이란?" },
     ]; }
   },
 ];
@@ -2835,14 +2816,31 @@ function stampMsg(m) {
 const AiChatTab = ({ meishiki }) => {
   const M = meishiki;
 
-  // 初期化：localStorageから復元 or 新規
+  // 初期化：localStorageから復元（挨拶は常に最新言語で再生成）
   const [msgs, setMsgs] = useState(function() {
     var saved = loadPopoMsgs();
-    return saved || makeInitialMessages(M);
+    var initial = makeInitialMessages(M)[0];
+    if (saved && saved.length > 0) return [initial].concat(saved.slice(1));
+    return [initial];
   });
   const [input, setInput] = useState("");
   const [cat, setCat]     = useState(0);
+  const [_langTick, setLangTick] = useState(0);
   const bottomRef         = React.useRef(null);
+
+  // 言語切替検知 → 強制再レンダリング & 挨拶を最新言語で再生成
+  useEffect(function() {
+    function onLangChange() { setLangTick(function(n){ return n + 1; }); }
+    window.addEventListener('pf-lang-change', onLangChange);
+    return function() { window.removeEventListener('pf-lang-change', onLangChange); };
+  }, []);
+  useEffect(function() {
+    if (_langTick === 0) return;
+    setMsgs(function(prev) {
+      var fresh = makeInitialMessages(M)[0];
+      return [fresh].concat(prev.slice(1));
+    });
+  }, [_langTick]);
 
   // msgs が変わるたびに localStorage へ保存
   useEffect(function() {
@@ -2864,9 +2862,10 @@ const AiChatTab = ({ meishiki }) => {
       var _remainMs = POPO_EXPIRE_MS - (_now - _oldest.sentAt);
       if (_remainMs > 0) {
         var _remainHr = Math.ceil(_remainMs / (1000 * 60 * 60));
+        var _isKrExp = ACK.getLang() === 'kr';
         oldestExpiry = _remainHr >= 24
-          ? Math.ceil(_remainHr / 24) + "日後"
-          : _remainHr + "時間後";
+          ? Math.ceil(_remainHr / 24) + (_isKrExp ? "일 후" : "日後")
+          : _remainHr + (_isKrExp ? "시간 후" : "時間後");
       }
     }
   } catch(e) {}
@@ -2878,10 +2877,17 @@ const AiChatTab = ({ meishiki }) => {
     savePopoMsgs(fresh);
   };
 
-  const send = function(text) {
-    if (!text || !text.trim()) return;
-    var trimmed = text.trim();
-    var answer = generatePopoAnswer(M, trimmed);
+  // displayText = ユーザーバブル表示用 (KR/JA)
+  // backendQuery = generatePopoAnswer 入力 (常に JA、パターンマッチ用)
+  const send = function(displayText, backendQuery) {
+    if (!displayText || !displayText.trim()) return;
+    var trimmed = displayText.trim();
+    var query = (backendQuery || trimmed).trim();
+    var answer = generatePopoAnswer(M, query);
+    if (ACK.getLang() === 'kr') {
+      try { answer = translatePopoAnswer(answer); }
+      catch (e) { console.warn('[AiChatTab] translatePopoAnswer failed:', e.message); }
+    }
     var now = Date.now();
     setMsgs(function(prev) {
       return prev.concat([
@@ -2904,7 +2910,7 @@ const AiChatTab = ({ meishiki }) => {
           <div style={{ width:44, height:44, borderRadius:"50%", background:"rgba(201,168,76,0.12)", border:"1px solid rgba(201,168,76,0.3)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}><PandaIcon size={26} /></div>
           <div style={{ flex:1 }}>
             <p style={{ fontFamily:"'Shippori Mincho',serif", fontSize:16, fontWeight:700, color:C.gold }}>ポポに聞く</p>
-            <p style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>{M.nichi.kan}{M.nichi.shi}日主・{M.kakukyoku}をもとに答えるンダよ🐼</p>
+            <p style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>{ACK.getLang()==='kr' ? ACK.buildHeaderSubtext_KR(M.nichi.kan, M.nichi.shi, M.kakukyoku) : ACK.buildHeaderSubtext_JA(M.nichi.kan, M.nichi.shi, M.kakukyoku)}</p>
           </div>
 
         </div>
@@ -2914,7 +2920,7 @@ const AiChatTab = ({ meishiki }) => {
           background:"rgba(201,168,76,0.05)", border:"1px solid rgba(201,168,76,0.12)" }}>
           <span style={{ fontSize:11 }}>💾</span>
           <p style={{ fontSize:10, color:C.textMuted, lineHeight:1.5 }}>
-            会話は<span style={{ color:C.goldDim, fontWeight:600 }}>72時間経つと削除されるンダよ🐼</span>
+            {ACK.getLang()==='kr' ? '대화는 ' : '会話は'}<span style={{ color:C.goldDim, fontWeight:600 }}>{ACK.getLang()==='kr' ? '72시간이 지나면 삭제돼요🐼' : '72時間経つと削除されるンダよ🐼'}</span>
           </p>
         </div>
 
@@ -2932,13 +2938,19 @@ const AiChatTab = ({ meishiki }) => {
 
         {/* クイック質問ボタン */}
         <div style={{ flexShrink:0, display:"flex", flexWrap:"wrap", gap:6, marginBottom:12 }}>
-          {qs.map(function(q, i){
-            return (
-              <button key={i} onClick={function(){ send(q); }} style={{ padding:"6px 14px", borderRadius:20, cursor:"pointer", background:curCat.bg, border:"1px solid " + curCat.border, color:curCat.color, fontSize:12, transition:"all 0.2s" }}>
-                {q}
-              </button>
-            );
-          })}
+          {(function(){
+            var _qLang = ACK.getLang();
+            return qs.map(function(q, i){
+              // {ja,kr} ペア形式 / 後方互換: 文字列も許容
+              var label = (typeof q === 'string') ? q : (_qLang === 'kr' ? q.kr : q.ja);
+              var backend = (typeof q === 'string') ? q : q.ja;
+              return (
+                <button key={i} onClick={function(){ send(label, backend); }} style={{ padding:"6px 14px", borderRadius:20, cursor:"pointer", background:curCat.bg, border:"1px solid " + curCat.border, color:curCat.color, fontSize:12, transition:"all 0.2s" }}>
+                  {label}
+                </button>
+              );
+            });
+          })()}
         </div>
 
         {/* メッセージ一覧 */}
@@ -2965,7 +2977,7 @@ const AiChatTab = ({ meishiki }) => {
             value={input}
             onChange={function(e){ setInput(e.target.value); }}
             onKeyDown={function(e){ if(e.key==="Enter" && input.trim()){ send(input); } }}
-            placeholder="自由に質問もできるンダよ…"
+            placeholder={ACK.getLang()==='kr' ? '자유롭게 질문할 수도 있어요…' : '自由に質問もできるンダよ…'}
             style={{ flex:1, padding:"12px 16px", borderRadius:12, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(201,168,76,0.25)", color:C.text, fontSize:13, outline:"none" }}
           />
           <button
@@ -4154,7 +4166,8 @@ function FortuneResult() {
               { id: "timeline", label: "運勢タイムライン", icon: "📅",  premium: false },
               { id: "compat",   label: "相性占い",         icon: "💞",  premium: "LIGHT" },
               { id: "aichat",   label: "ポポに聞く",       icon: "🐼",  premium: "LIGHT" },
-              { id: "expert",   label: "専門家に相談",     icon: "👨‍🏫", premium: "COMING" },
+              // 韓国語モードでは専門家に相談タブを非表示
+              ...(ACK.getLang() === 'kr' ? [] : [{ id: "expert", label: "専門家に相談", icon: "👨‍🏫", premium: "COMING" }]),
 
             ].map(t => (
               <div key={t.id} style={{ position: "relative" }}>
@@ -4486,8 +4499,8 @@ function FortuneResult() {
                       ? `今は忌神「${kj}」が大運に流れている時期ンダ。命式にとって消耗しやすい流れだから、無理に攻めず守りを固めながら力を蓄える時期と考えるといいんダ。`
                       : `今の大運は命式に対して中立な流れンダ。大きな追い風も逆風もない時期だから、焦らず自分のペースで着実に積み上げていくのが一番ンダよ。`);
 
-                  // 元命（月柱蔵干本気 × 日干 の通変星）— 言語別テキストを取得
-                  const myGenmei = getGenmei(calc.pillars.day.kan, calc.pillars.month.shi);
+                  // 元命（月柱蔵干 × 日干 の通変星）— 節入り経過日数で 余気/中気/本気 を選定
+                  const myGenmei = getGenmei(calc.pillars.day.kan, calc.pillars.month.shi, calc.pillars.month.daysFromSetsu);
                   const _genmeiTexts = getGenmeiTextsByLang(currentLang);
                   const myGenmeiData = myGenmei ? _genmeiTexts[myGenmei] : null;
                   // 元命テキストがあれば tsTextDetail を置換、無ければ従来の通変星説明を残す
@@ -4527,7 +4540,12 @@ function FortuneResult() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
                   {M.pillars.map((p, i) => {
                     const isDay = i === 2;
+                    const isMonth = i === 1;
                     const zokan = M.zokan[i]?.zokan || [];
+                    // 月柱のみ: 節入り経過日数から元命に該当する蔵干を算出（ハイライト用）
+                    const genmeiKan = isMonth
+                      ? getMonthZokan(p.shi, M._calc?.pillars?.month?.daysFromSetsu)
+                      : null;
                     const GOGYO_COLOR = { '木':'#7EC87A','火':'#E8745A','土':'#C9A84C','金':'#B8C8E0','水':'#6EB4DC' };
                     const JIKKAN_G2 = ['木','木','火','火','土','土','金','金','水','水'];
                     const JIKKAN_L2 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
@@ -4592,14 +4610,28 @@ function FortuneResult() {
                           <p style={{ fontSize: 12, color: C.textMuted }}>{p.unsei || "—"}</p>
                         </div>
 
-                        {/* 蔵干 */}
+                        {/* 蔵干（月柱は元命に該当する蔵干をゴールドで強調） */}
                         <div style={{ padding: "8px 6px 12px", textAlign: "center" }}>
                           <p style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", marginBottom: 6, letterSpacing: "0.1em" }}>蔵干</p>
                           <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "center" }}>
-                            {zokan.map((k, ki) => (
-                              <span key={ki} style={{ fontSize: 11, color: C.textMuted, fontFamily: "'Shippori Mincho',serif" }}>{k}</span>
-                            ))}
+                            {zokan.map((k, ki) => {
+                              const isGenmei = isMonth && k === genmeiKan;
+                              return (
+                                <span key={ki} style={{
+                                  fontSize: isGenmei ? 13 : 11,
+                                  color: isGenmei ? C.gold : C.textMuted,
+                                  fontFamily: "'Shippori Mincho',serif",
+                                  fontWeight: isGenmei ? 700 : 400,
+                                  letterSpacing: isGenmei ? '0.05em' : 'normal',
+                                }} title={isGenmei ? '元命（月支採用蔵干）' : undefined}>
+                                  {isGenmei ? '★' + k : k}
+                                </span>
+                              );
+                            })}
                           </div>
+                          {isMonth && genmeiKan && (
+                            <p style={{ fontSize: 8, color: C.gold, opacity: 0.7, marginTop: 4, letterSpacing: '0.05em' }}>★=元命</p>
+                          )}
                         </div>
                       </div>
                     );
@@ -5010,18 +5042,29 @@ function FortuneResult() {
                   const JIKKAN_KK  = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
                   const JIKKAN_G   = ['木','木','火','火','土','土','金','金','水','水'];
                   const JUNISHI_KK = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
-                  const ZOKAN_MAP  = {子:['壬','癸'],丑:['己','癸','辛'],寅:['甲','丙','戊'],卯:['乙'],辰:['戊','乙','癸'],巳:['丙','庚','戊'],午:['丁','己'],未:['己','丁','乙'],申:['庚','壬','戊'],酉:['辛'],戌:['戊','辛','丁'],亥:['壬','甲']};
+                  // 蔵干分野表 (genmeiText.js _ZOKAN_ALLOCATION) を単一ソースとして参照
+                  const ZOKAN_MAP  = {
+                    子: getZokanList('子'), 丑: getZokanList('丑'), 寅: getZokanList('寅'),
+                    卯: getZokanList('卯'), 辰: getZokanList('辰'), 巳: getZokanList('巳'),
+                    午: getZokanList('午'), 未: getZokanList('未'), 申: getZokanList('申'),
+                    酉: getZokanList('酉'), 戌: getZokanList('戌'), 亥: getZokanList('亥'),
+                  };
                   const SEI_KK  = {木:'火',火:'土',土:'金',金:'水',水:'木'};
                   const KOKU_KK = {木:'土',火:'金',土:'水',金:'木',水:'火'};
                   function getTsuhen(niKan, tiKan) {
+                    // 通変星: SEI=生む先, KOKU=剋す先
+                    //   SEI[ng]===tg → 我生 → 食神/傷官
+                    //   KOKU[ng]===tg→ 我克 → 偏財/正財
+                    //   SEI[tg]===ng → 生我 → 偏印/正印
+                    //   KOKU[tg]===ng→ 克我 → 偏官/正官
                     const ni = JIKKAN_KK.indexOf(niKan), ti = JIKKAN_KK.indexOf(tiKan);
                     if (ni < 0 || ti < 0) return '─';
                     const ng = JIKKAN_G[ni], tg = JIKKAN_G[ti], s = (ni%2)===(ti%2);
                     if (ng===tg) return s?'比肩':'劫財';
                     if (SEI_KK[ng]===tg) return s?'食神':'傷官';
                     if (KOKU_KK[ng]===tg) return s?'偏財':'正財';
-                    if (SEI_KK[tg]===ng) return s?'偏官':'正官';
-                    if (KOKU_KK[tg]===ng) return s?'偏印':'正印';
+                    if (SEI_KK[tg]===ng) return s?'偏印':'正印';
+                    if (KOKU_KK[tg]===ng) return s?'偏官':'正官';
                     return '比肩';
                   }
                   const dayKan = pillars.day.kan;
@@ -5034,30 +5077,29 @@ function FortuneResult() {
                     { label:'日柱', kan:dayKan,            shi:pillars.day.shi,   pillarKey:'day', isDay:true },
                     ...(pillars.hour ? [{ label:'時柱', kan:pillars.hour.kan, shi:pillars.hour.shi, pillarKey:'hour' }] : []),
                   ];
-                  // 天干の通変星
+                  // 天干の通変星（表示用）
                   const kanTsuhen = pillarRows.map(r => r.isDay ? '─（日主）' : getTsuhen(dayKan, r.kan));
-                  // 蔵干の通変星（地支から蔵干を取得）
+                  // 蔵干の通変星（地支から蔵干を取得・表示用）
                   const zokanTsuhen = pillarRows.map(r => {
                     const zk = ZOKAN_MAP[r.shi] || [];
                     return zk.map(k => ({ kan: k, ts: getTsuhen(dayKan, k) }));
                   });
-                  // 全通変星の集計（出所も記録）
-                  const tsCount = {};
+                  // 出所トラッキング（どの柱から来た星か） — UI 表示専用
                   const tsSources = {}; // {星名: [{label, kan, type:'天干'|'蔵干'}]}
                   pillarRows.forEach((r, i) => {
                     if (!r.isDay) {
                       const ts = kanTsuhen[i];
-                      tsCount[ts] = (tsCount[ts]||0)+1;
                       if (!tsSources[ts]) tsSources[ts] = [];
                       tsSources[ts].push({ label:r.label, kan:r.kan, type:'天干' });
                     }
                     zokanTsuhen[i].forEach(z => {
-                      tsCount[z.ts] = (tsCount[z.ts]||0)+0.5;
                       if (!tsSources[z.ts]) tsSources[z.ts] = [];
                       tsSources[z.ts].push({ label:r.label, kan:z.kan, type:'蔵干' });
                     });
                   });
-                  const sortedTs = Object.entries(tsCount).filter(([k])=>k!=='─').sort((a,b)=>b[1]-a[1]);
+                  // ランキング・最強通変星はエンジンが算出済 (calc.jisshinCount = 蔵干分野表加重)
+                  const tsCount = (M._calc && M._calc.jisshinCount) ? M._calc.jisshinCount : {};
+                  const sortedTs = Object.entries(tsCount).filter(([k])=>k!=='─（日主）'&&k!=='─').sort((a,b)=>b[1]-a[1]);
                   return (
                     <>
                       {/* ポポコメント */}

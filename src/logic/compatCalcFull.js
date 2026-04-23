@@ -16,6 +16,12 @@ import {
   GOGYO_MBTI_PROFILE, GOGYO_REL_DESC,
   GOGYO_MBTI_AFFINITY, CF_DESC,
 } from '../data/compatData.js';
+import SYNTHESIS_DICT_JA, {
+  fillTemplate as _synFill,
+  getTopGodPair as _synGetTopGodPair,
+  getSpecialStarPair as _synGetSpecialStarPair,
+} from '../data/synthesisDictionary.js';
+import { getGenmei as _synGetGenmei } from '../data/genmeiText.js';
 
 // ── 三合・三刑・天地徳合 定数 ────────────────────────────────
 // 三合: 3つの地支が揃うと強力なエネルギーを生む
@@ -150,6 +156,894 @@ function getTonedLabel(score, tone, ptName) {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  SYNTHESIS sections builder (Phase 1)
+//  仕様書: docs/phase1-compatCalcFull-spec.md (synthesisDictionary.md)
+//  辞書:    src/data/synthesisDictionary.js
+//
+//  入力 {myCalc, ptCalc, myBase, ptBase, myGogyo, ptGogyo, gogyo_rel}
+//  から、SYNTHESIS_DICT_JA を引いて 8 セクションのデータ配列を返す。
+//  各セクション: { id, title, body, meta }
+// ══════════════════════════════════════════════════════════════
+
+// MBTI相性タイプ判定（モジュールスコアに hoisted・複数箇所で再利用）
+function _getMbtiCompatType(a, b) {
+  if (!a || !b) return { label: '─', desc: '─' };
+  const aE = a[0] === 'E', bE = b[0] === 'E';
+  const aN = a[1] === 'N', bN = b[1] === 'N';
+  const aF = a[2] === 'F', bF = b[2] === 'F';
+  const aJ = a[3] === 'J', bJ = b[3] === 'J';
+  const same_ei = aE === bE, same_nb = aN === bN, same_tf = aF === bF, same_jp = aJ === bJ;
+  const score = (same_ei ? 1 : 0) + (same_nb ? 2 : 0) + (same_tf ? 2 : 0) + (same_jp ? 1 : 0);
+  if (score >= 5) return { label: '鏡型', desc: '価値観・思考パターンが非常に近い。理解し合いやすい反面、同じ盲点を持つこともある' };
+  if (same_nb && same_tf) return { label: '共鳴型', desc: 'ものの見方と判断軸が一致している。深い話で自然に通じ合える関係' };
+  if (!same_nb && !same_tf) return { label: '補完型', desc: '視点と判断軸が異なる。お互いの見えていない部分を補い合える関係' };
+  if (same_nb && !same_tf) return { label: '共感型', desc: '世界の見方は似ているが、判断の仕方が違う。刺激的で学び合える関係' };
+  return { label: '中和型', desc: '共通点と違いがバランス良く混在している。状況に応じて相性が変わる' };
+}
+
+// 十二運星 → エネルギー強度（synthesisDictionary.md エネルギー強度マップ）
+const _JUNIU_ENERGY = {
+  '帝旺': 100, '臨官': 85, '建禄': 85, '冠帯': 75, '長生': 70,
+  '衰': 60, '養': 55, '沐浴': 50,
+  '病': 40, '胎': 35, '墓': 30, '死': 20, '絶': 10,
+};
+
+// 十二運星ペアタイプ判定
+function _judgeTwelveStagePairType(selfStage, partnerStage) {
+  const a = _JUNIU_ENERGY[selfStage];
+  const b = _JUNIU_ENERGY[partnerStage];
+  if (typeof a !== 'number' || typeof b !== 'number') return 'imbalanced';
+  if (a >= 70 && b >= 70) return 'equal_strong';
+  if (a < 40 && b < 40) return 'equal_weak';
+  if (Math.abs(a - b) >= 40) return 'complementary';
+  return 'imbalanced';
+}
+
+// 喜神ペアタイプ判定
+function _judgeKishinPairType(selfKishin, partnerKishin) {
+  if (!Array.isArray(selfKishin) || !Array.isArray(partnerKishin)
+      || selfKishin.length === 0 || partnerKishin.length === 0) return 'neutral';
+  const overlap = selfKishin.filter(g => partnerKishin.indexOf(g) >= 0);
+  if (overlap.length === selfKishin.length && overlap.length === partnerKishin.length) return 'identical';
+  if (overlap.length === 0) return 'opposite';
+  if (overlap.length > 0) return 'partial';
+  return 'neutral';
+}
+
+// ==========================================================
+// 恋人・配偶者向けスコア加点要素(4 関数 + 統合関数)
+// ==========================================================
+
+/**
+ * 要素 1: 干合化気補完(+12)
+ * 2 人の日干が干合し、化気五行が片方の命式で欠損(≤0.5)している場合に加点。
+ */
+function _calcKangoKakiFukkan(myCalc, ptCalc) {
+  const myKan = myCalc && myCalc.pillars && myCalc.pillars.day && myCalc.pillars.day.kan;
+  const ptKan = ptCalc && ptCalc.pillars && ptCalc.pillars.day && ptCalc.pillars.day.kan;
+  if (!myKan || !ptKan) return { points: 0, matched: false, reason: '日干不明' };
+
+  const KANGO_KAKI = {
+    '甲己': '土', '己甲': '土',
+    '乙庚': '金', '庚乙': '金',
+    '丙辛': '水', '辛丙': '水',
+    '丁壬': '木', '壬丁': '木',
+    '戊癸': '火', '癸戊': '火',
+  };
+  const kaki = KANGO_KAKI[myKan + ptKan];
+  if (!kaki) return { points: 0, matched: false, reason: '干合不成立' };
+
+  const myVal = (myCalc.gokyo && myCalc.gokyo[kaki]) || 0;
+  const ptVal = (ptCalc.gokyo && ptCalc.gokyo[kaki]) || 0;
+  if (myVal <= 0.5 || ptVal <= 0.5) {
+    return {
+      points: 12, matched: true, kaki,
+      reason: `干合化気 ${myKan}${ptKan}→${kaki}、欠損補完(self=${myVal}, pt=${ptVal})`,
+    };
+  }
+  return {
+    points: 0, matched: false, kaki,
+    reason: `干合成立だが化気 ${kaki} は欠損なし(self=${myVal}, pt=${ptVal})`,
+  };
+}
+
+/**
+ * 日干→日干 の通変星を求めるヘルパー。
+ */
+function _getTsuhenseiFromKan(selfKan, targetKan) {
+  const TABLE = {
+    '甲': {'甲':'比肩','乙':'劫財','丙':'食神','丁':'傷官','戊':'偏財','己':'正財','庚':'偏官','辛':'正官','壬':'偏印','癸':'印綬'},
+    '乙': {'甲':'劫財','乙':'比肩','丙':'傷官','丁':'食神','戊':'正財','己':'偏財','庚':'正官','辛':'偏官','壬':'印綬','癸':'偏印'},
+    '丙': {'甲':'偏印','乙':'印綬','丙':'比肩','丁':'劫財','戊':'食神','己':'傷官','庚':'偏財','辛':'正財','壬':'偏官','癸':'正官'},
+    '丁': {'甲':'印綬','乙':'偏印','丙':'劫財','丁':'比肩','戊':'傷官','己':'食神','庚':'正財','辛':'偏財','壬':'正官','癸':'偏官'},
+    '戊': {'甲':'偏官','乙':'正官','丙':'偏印','丁':'印綬','戊':'比肩','己':'劫財','庚':'食神','辛':'傷官','壬':'偏財','癸':'正財'},
+    '己': {'甲':'正官','乙':'偏官','丙':'印綬','丁':'偏印','戊':'劫財','己':'比肩','庚':'傷官','辛':'食神','壬':'正財','癸':'偏財'},
+    '庚': {'甲':'偏財','乙':'正財','丙':'偏官','丁':'正官','戊':'偏印','己':'印綬','庚':'比肩','辛':'劫財','壬':'食神','癸':'傷官'},
+    '辛': {'甲':'正財','乙':'偏財','丙':'正官','丁':'偏官','戊':'印綬','己':'偏印','庚':'劫財','辛':'比肩','壬':'傷官','癸':'食神'},
+    '壬': {'甲':'食神','乙':'傷官','丙':'偏財','丁':'正財','戊':'偏官','己':'正官','庚':'偏印','辛':'印綬','壬':'比肩','癸':'劫財'},
+    '癸': {'甲':'傷官','乙':'食神','丙':'正財','丁':'偏財','戊':'正官','己':'偏官','庚':'印綬','辛':'偏印','壬':'劫財','癸':'比肩'},
+  };
+  return (TABLE[selfKan] && TABLE[selfKan][targetKan]) || null;
+}
+
+/**
+ * 要素 2: 配偶者星相互成立(+5 正財×正官 / +3 偏財×偏官)
+ * gender は '男性'/'女性' を想定(不明/同性時は双方向チェック)。
+ */
+function _calcHaiguushaSeiritsu(myCalc, ptCalc) {
+  const myKan = myCalc && myCalc.pillars && myCalc.pillars.day && myCalc.pillars.day.kan;
+  const ptKan = ptCalc && ptCalc.pillars && ptCalc.pillars.day && ptCalc.pillars.day.kan;
+  if (!myKan || !ptKan) return { points: 0, matched: false, reason: '日干不明' };
+
+  const myToPt = _getTsuhenseiFromKan(myKan, ptKan);
+  const ptToMy = _getTsuhenseiFromKan(ptKan, myKan);
+  const myGender = myCalc.input && myCalc.input.gender;
+  const ptGender = ptCalc.input && ptCalc.input.gender;
+  const isMale = (g) => g === '男' || g === '男性';
+  const isFemale = (g) => g === '女' || g === '女性';
+
+  let femaleTo = null, maleTo = null;
+  if (isFemale(myGender) && isMale(ptGender)) { femaleTo = myToPt; maleTo = ptToMy; }
+  else if (isMale(myGender) && isFemale(ptGender)) { femaleTo = ptToMy; maleTo = myToPt; }
+
+  if (femaleTo && maleTo) {
+    if (femaleTo === '正財' && maleTo === '正官') return { points: 5, matched: true, reason: '正財×正官 相互成立' };
+    if (femaleTo === '偏財' && maleTo === '偏官') return { points: 3, matched: true, reason: '偏財×偏官 相互成立' };
+    return { points: 0, matched: false, reason: `配偶者星不成立(女→男=${femaleTo}, 男→女=${maleTo})` };
+  }
+  if ((myToPt === '正財' && ptToMy === '正官') || (myToPt === '正官' && ptToMy === '正財')) {
+    return { points: 5, matched: true, reason: '正財×正官 相互成立(双方向)' };
+  }
+  if ((myToPt === '偏財' && ptToMy === '偏官') || (myToPt === '偏官' && ptToMy === '偏財')) {
+    return { points: 3, matched: true, reason: '偏財×偏官 相互成立(双方向)' };
+  }
+  return { points: 0, matched: false, reason: `配偶者星不成立(${myToPt}×${ptToMy})` };
+}
+
+/**
+ * 要素 3: 五行補完(+4) - 干合化気補完と重複排除
+ */
+function _calcGogyoFukkan(myCalc, ptCalc, kangoKakiMatched) {
+  if (kangoKakiMatched) {
+    return { points: 0, matched: false, reason: '干合化気補完と重複のため加点なし' };
+  }
+  const elements = ['木', '火', '土', '金', '水'];
+  const matched = [];
+  for (const el of elements) {
+    const myVal = (myCalc.gokyo && myCalc.gokyo[el]) || 0;
+    const ptVal = (ptCalc.gokyo && ptCalc.gokyo[el]) || 0;
+    if (myVal <= 0.5 && ptVal >= 2) matched.push(`${el}(pt→self)`);
+    if (ptVal <= 0.5 && myVal >= 2) matched.push(`${el}(self→pt)`);
+  }
+  if (matched.length > 0) {
+    return { points: 4, matched: true, reason: `五行補完成立: ${matched.join(', ')}` };
+  }
+  return { points: 0, matched: false, reason: '五行補完なし' };
+}
+
+/**
+ * 要素 4: 暗合(+3) - 日支の蔵干同士が天干五合を形成
+ */
+function _calcAngou(myCalc, ptCalc) {
+  const myShi = myCalc && myCalc.pillars && myCalc.pillars.day && myCalc.pillars.day.shi;
+  const ptShi = ptCalc && ptCalc.pillars && ptCalc.pillars.day && ptCalc.pillars.day.shi;
+  if (!myShi || !ptShi) return { points: 0, matched: false, reason: '日支不明' };
+
+  const ZOUKAN = {
+    '子': ['壬', '癸'], '丑': ['己', '癸', '辛'], '寅': ['甲', '丙', '戊'],
+    '卯': ['乙'], '辰': ['戊', '乙', '癸'], '巳': ['丙', '戊', '庚'],
+    '午': ['丁', '己'], '未': ['己', '丁', '乙'], '申': ['庚', '戊', '壬'],
+    '酉': ['辛'], '戌': ['戊', '辛', '丁'], '亥': ['壬', '甲'],
+  };
+  const KANGO_PAIRS = new Set(['甲己','己甲','乙庚','庚乙','丙辛','辛丙','丁壬','壬丁','戊癸','癸戊']);
+
+  const myZ = ZOUKAN[myShi] || [];
+  const ptZ = ZOUKAN[ptShi] || [];
+  const matches = [];
+  for (const mk of myZ) for (const pk of ptZ) {
+    if (KANGO_PAIRS.has(mk + pk)) matches.push(`${mk}×${pk}`);
+  }
+  if (matches.length > 0) {
+    return { points: 3, matched: true, reason: `日支蔵干暗合: ${myShi}中×${ptShi}中 = ${matches.join(', ')}` };
+  }
+  return { points: 0, matched: false, reason: '暗合なし' };
+}
+
+/**
+ * 恋人・配偶者向け加点総計
+ * 対象 4 続柄のみ適用(恋人・パートナー / 配偶者・婚約者 / 気になる人 / 元交際相手)。
+ */
+function _calcCoupleBonus(myCalc, ptCalc, relation) {
+  const TARGET = ['恋人・パートナー', '配偶者', '気になる人', '元交際相手'];
+  if (!TARGET.includes(relation)) {
+    return { totalBonus: 0, applied: false, reason: `対象外続柄(${relation})`, details: {} };
+  }
+  const kangoKaki = _calcKangoKakiFukkan(myCalc, ptCalc);
+  const haiguusha = _calcHaiguushaSeiritsu(myCalc, ptCalc);
+  const gogyoFukkan = _calcGogyoFukkan(myCalc, ptCalc, kangoKaki.matched);
+  const angou = _calcAngou(myCalc, ptCalc);
+  const totalBonus = kangoKaki.points + haiguusha.points + gogyoFukkan.points + angou.points;
+  return {
+    totalBonus, applied: true, relation,
+    details: { kangoKaki, haiguusha, gogyoFukkan, angou },
+  };
+}
+
+/**
+ * 日支の和合判定(正統派四柱推命の六合・三合)
+ *
+ * @param {string} s1 - 自分の日支(例: '子', '丑' ... '亥')
+ * @param {string} s2 - 相手の日支
+ * @returns {boolean} 六合または三合の関係なら true
+ *
+ * 古典: 地支六合 / 地支三合局
+ *   六合: 子丑・寅亥・卯戌・辰酉・巳申・午未
+ *   三合: 申子辰(水局)・亥卯未(木局)・寅午戌(火局)・巳酉丑(金局)
+ */
+function _isShiHarmony(s1, s2) {
+  if (!s1 || !s2) return false;
+  if (s1 === s2) return false;  // 同じ日支は比和(和合ではない)
+
+  // 六合(地支六合)
+  const rokugo = {
+    '子': '丑', '丑': '子',
+    '寅': '亥', '亥': '寅',
+    '卯': '戌', '戌': '卯',
+    '辰': '酉', '酉': '辰',
+    '巳': '申', '申': '巳',
+    '午': '未', '未': '午',
+  };
+  if (rokugo[s1] === s2) return true;
+
+  // 三合(三合局)
+  const sango = [
+    ['申', '子', '辰'],  // 水局
+    ['亥', '卯', '未'],  // 木局
+    ['寅', '午', '戌'],  // 火局
+    ['巳', '酉', '丑'],  // 金局
+  ];
+  for (const group of sango) {
+    if (group.includes(s1) && group.includes(s2)) return true;
+  }
+
+  return false;
+}
+
+/**
+ * 正統派四柱推命に基づく conclusion 判定
+ *
+ * 判定順序(優先度高→低):
+ *   1. fast_bond(天地徳合的な強い引き合い)
+ *      - 相生型 × MBTI良 × (日支和合 or 喜神一致)
+ *      - 比和型 × MBTI良
+ *   2. cyclic(循環型の縁)
+ *      - 比和型 / 相生型(fast_bond 条件外)/ 喜神完全逆
+ *   3. slow_burn(相剋型:ぶつかりから深まる縁)
+ *   4. フォールバック: cyclic(中庸)
+ *
+ * @param {string} gogyoRel - 五行関係
+ * @param {string} mbtiCompatLabel - MBTI 相性ラベル
+ * @param {object} extraContext - { selfShi, partnerShi, kishinMatch }
+ * @returns {string} 'fast_bond' | 'slow_burn' | 'cyclic'
+ */
+function _judgeConclusionType(gogyoRel, mbtiCompatLabel, extraContext) {
+  const ctx = extraContext || {};
+  const selfShi = ctx.selfShi;
+  const partnerShi = ctx.partnerShi;
+  const kishinMatch = ctx.kishinMatch;
+
+  const mbtiGood = (mbtiCompatLabel === '鏡型' || mbtiCompatLabel === '共鳴型');
+  const shiHarmony = _isShiHarmony(selfShi, partnerShi);
+  const kishinGood = (kishinMatch === 'identical' || kishinMatch === 'partial');
+
+  // === fast_bond(天地徳合・強い引き合い)===
+  if (gogyoRel === '相生型' && mbtiGood && (shiHarmony || kishinGood)) return 'fast_bond';
+  if (gogyoRel === '比和型' && mbtiGood) return 'fast_bond';
+
+  // === cyclic(循環型の縁)===
+  if (gogyoRel === '比和型') return 'cyclic';
+  if (gogyoRel === '相生型') return 'cyclic';
+  if (kishinMatch === 'opposite') return 'cyclic';
+
+  // === slow_burn(ぶつかりから深まる縁)===
+  if (gogyoRel === '相剋型') return 'slow_burn';
+
+  // === フォールバック: 中庸 ===
+  return 'cyclic';
+}
+
+// 五行バランス関係タイプ判定（gokyo オブジェクト：{木,火,土,金,水}）
+function _judgeElementBalanceType(myGokyo, ptGokyo) {
+  if (!myGokyo || !ptGokyo) return 'neutral';
+  const elems = ['木', '火', '土', '金', '水'];
+  let myWeak = 0, ptWeak = 0, opposite = 0, similar = 0;
+  for (const e of elems) {
+    const a = myGokyo[e] || 0, b = ptGokyo[e] || 0;
+    if (a < 0.5) myWeak++;
+    if (b < 0.5) ptWeak++;
+    // 自分が弱く相手が強い（補完）
+    if (a < 0.5 && b >= 1.0) opposite++;
+    if (b < 0.5 && a >= 1.0) opposite++;
+    // 似た値
+    if (Math.abs(a - b) < 1.0) similar++;
+  }
+  if (opposite >= 3) return 'complementary';
+  if (similar >= 4) return 'similar';
+  if (opposite >= 1) return 'partial';
+  return 'neutral';
+}
+
+// 特殊星ペアの最適選択（最優先：両者が持つ命名一致 > 強い星 > default）
+function _pickSpecialStarPair(selfStars, partnerStars) {
+  const D = SYNTHESIS_DICT_JA.specialStarPair || {};
+  if (!Array.isArray(selfStars) || !Array.isArray(partnerStars)
+      || selfStars.length === 0 || partnerStars.length === 0) {
+    return { selfStar: null, partnerStar: null, data: D.default };
+  }
+  // 1. 辞書に明示的に定義されているペアを探す（双方向）
+  for (const s of selfStars) {
+    for (const p of partnerStars) {
+      if (D[s + '_' + p]) return { selfStar: s, partnerStar: p, data: D[s + '_' + p] };
+      if (D[p + '_' + s]) return { selfStar: s, partnerStar: p, data: D[p + '_' + s] };
+    }
+  }
+  // 2. フォールバック：先頭ペア
+  return { selfStar: selfStars[0], partnerStar: partnerStars[0], data: D.default };
+}
+
+// MBTIアラインメント (一致型/ギャップ型) を判定
+function _judgeMbtiAlignment(gogyo, mbtiBase) {
+  if (!gogyo || !mbtiBase) return null;
+  const prof = GOGYO_MBTI_PROFILE[gogyo];
+  if (!prof || !Array.isArray(prof.affinity_mbti)) return null;
+  return prof.affinity_mbti.indexOf(mbtiBase) >= 0 ? 'match' : 'gap';
+}
+
+// 五行ペアタイプ判定（同一/相生/相剋）
+//   same: 同じ五行
+//   sheng: self → partner を生む（相生 順方向）
+//   sheng_reverse: partner → self を生む（相生 逆方向）
+//   ke: self → partner を剋す（相剋 順方向）
+//   ke_reverse: partner → self を剋す（相剋 逆方向）
+function _judgeFiveElementType(self, partner) {
+  if (!self || !partner) return null;
+  if (self === partner) return 'same';
+  // _SEI: 木→火→土→金→水→木
+  const SEI_REL = { 木:'火', 火:'土', 土:'金', 金:'水', 水:'木' };
+  const KOKU_REL = { 木:'土', 火:'金', 土:'水', 金:'木', 水:'火' };
+  if (SEI_REL[self] === partner) return 'sheng';
+  if (SEI_REL[partner] === self) return 'sheng_reverse';
+  if (KOKU_REL[self] === partner) return 'ke';
+  if (KOKU_REL[partner] === self) return 'ke_reverse';
+  return null;
+}
+
+// 年干支から年支のみ算出（year - 4 を 12 で割った剰余）
+const _ANN_SHI_TBL = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+const _ANN_SHI_GOGYO = { 子:'水', 丑:'土', 寅:'木', 卯:'木', 辰:'土', 巳:'火', 午:'火', 未:'土', 申:'金', 酉:'金', 戌:'土', 亥:'水' };
+function _yearToShi(year) {
+  return _ANN_SHI_TBL[((year - 4) % 12 + 12) % 12];
+}
+function _yearToShiGogyo(year) {
+  return _ANN_SHI_GOGYO[_yearToShi(year)] || null;
+}
+
+/**
+ * 流年（annualFortune）解析
+ *   基準年-1〜+8 の10年分を解析。各年について年支の五行と
+ *   両者の喜神/忌神との関係で type を決定し、テンプレで生成。
+ *   さらに deepBondYears / tensionYears / voidPeriod を抽出。
+ *
+ * @remarks
+ *   現状は **未使用** (Synthesis から切り離し済 / 2026-04)。
+ *   将来「流年タイムライン」を Synthesis とは別の独立セクション/タブとして
+ *   実装する際に呼び出す前提で保持している。**削除しないこと**。
+ *   復活時は本関数 + synthesisDictionary.js に annualFortune キー再追加 +
+ *   独立 UI 側で `_analyzeAnnualFortune(myCalc, ptCalc)` を呼出す。
+ *
+ * @param {Object} myCalc  本人の calcMeishiki 結果 (kishin/kijin/voidYearsUpcoming 必須)
+ * @param {Object} ptCalc  相手の calcMeishiki 結果
+ * @returns {{ yearNotes: Array, deepBondYears: number[], tensionYears: number[], voidPeriod: ?{startYear,endYear,target} }}
+ */
+// eslint-disable-next-line no-unused-vars
+function _analyzeAnnualFortune(myCalc, ptCalc) {
+  const D = SYNTHESIS_DICT_JA;
+  const myKishin = (myCalc.kishin || []);
+  const myKijin  = (myCalc.kijin  || []);
+  const ptKishin = (ptCalc.kishin || []);
+  const ptKijin  = (ptCalc.kijin  || []);
+  const baseYear = new Date().getFullYear();
+  const yearNotes = [];
+  const deepBondYears = [];
+  const tensionYears = [];
+
+  for (let y = baseYear - 1; y <= baseYear + 8; y++) {
+    const elem = _yearToShiGogyo(y);
+    if (!elem) continue;
+    const myIsKi = myKishin.indexOf(elem) >= 0;
+    const myIsKj = myKijin.indexOf(elem)  >= 0;
+    const ptIsKi = ptKishin.indexOf(elem) >= 0;
+    const ptIsKj = ptKijin.indexOf(elem)  >= 0;
+
+    let type = null, text = null;
+    if (myIsKi && ptIsKi) {
+      type = 'deep_bond';
+      text = _synFill(D.annualFortune.deep_bond_year, { year: y, element: elem });
+      deepBondYears.push(y);
+    } else if (myIsKj && ptIsKj) {
+      type = 'tension';
+      text = _synFill(D.annualFortune.tension_year, { year: y, element: elem });
+      tensionYears.push(y);
+    } else if (myIsKi && !ptIsKj) {
+      type = 'asymmetric_self';
+      text = _synFill(D.annualFortune.kishin_year, { year: y, element: elem, target: 'あなた' });
+    } else if (ptIsKi && !myIsKj) {
+      type = 'asymmetric_partner';
+      text = _synFill(D.annualFortune.kishin_year, { year: y, element: elem, target: '相手' });
+    } else if (myIsKj && !ptIsKi) {
+      type = 'imushin_self';
+      text = _synFill(D.annualFortune.imushin_year, { year: y, element: elem, target: 'あなた' });
+    } else if (ptIsKj && !myIsKi) {
+      type = 'imushin_partner';
+      text = _synFill(D.annualFortune.imushin_year, { year: y, element: elem, target: '相手' });
+    }
+    if (type) yearNotes.push({ year: y, type, text });
+  }
+
+  // 空亡期: self.voidYearsUpcoming から該当範囲（baseYear-1〜+8）を抽出し、
+  //         連続する範囲が見つかれば期間として表示（self 側のみ。互いの空亡は重なりが稀のため）
+  let voidPeriod = null;
+  const myVoid = Array.isArray(myCalc.voidYearsUpcoming) ? myCalc.voidYearsUpcoming.slice().sort((a,b)=>a-b) : [];
+  const inRange = myVoid.filter(y => y >= baseYear - 1 && y <= baseYear + 8);
+  if (inRange.length > 0) {
+    voidPeriod = { startYear: inRange[0], endYear: inRange[inRange.length - 1], target: 'あなた' };
+    const txt = _synFill(D.annualFortune.void_period, {
+      startYear: voidPeriod.startYear, endYear: voidPeriod.endYear, target: voidPeriod.target,
+    });
+    yearNotes.push({ year: voidPeriod.startYear, type: 'void_period_self', text: txt });
+  }
+
+  // partner side void period も対称に
+  const ptVoid = Array.isArray(ptCalc.voidYearsUpcoming) ? ptCalc.voidYearsUpcoming.slice().sort((a,b)=>a-b) : [];
+  const ptInRange = ptVoid.filter(y => y >= baseYear - 1 && y <= baseYear + 8);
+  if (ptInRange.length > 0) {
+    const ptVoidPeriod = { startYear: ptInRange[0], endYear: ptInRange[ptInRange.length - 1], target: '相手' };
+    const txt = _synFill(D.annualFortune.void_period, ptVoidPeriod);
+    yearNotes.push({ year: ptVoidPeriod.startYear, type: 'void_period_partner', text: txt });
+  }
+
+  // 年順にソート
+  yearNotes.sort((a, b) => a.year - b.year);
+  return { yearNotes, deepBondYears, tensionYears, voidPeriod };
+}
+
+// 通変星名の正規化:
+//   engine は '正印' を返す (五行学派の表記) が、synthesisDictionary は伝統名 '印綬' をキーにしている。
+//   両者を辞書ヒットさせるため、辞書アクセス前に '正印' → '印綬' に正規化する。
+function _normalizeTsuhenForDict(name) {
+  if (name === '正印') return '印綬';
+  return name;
+}
+
+// 8セクションを構築（Object 形式）
+function _buildSynthesisSections(args) {
+  const D = SYNTHESIS_DICT_JA;
+  const {
+    myCalc, ptCalc,
+    myBase, ptBase,
+    myMbtiFull, ptMbtiFull, // 'INFP-T' のフル形式
+    myGogyo, ptGogyo,
+    gogyoRel, mbtiCompatLabel,
+  } = args;
+
+  const sections = {};
+
+  // ── 共通算出: 元命(getGenmei) ──────────────────────
+  // ⚠ self / partner / topGodPair の 3 セクションで同一の元命値を参照させ、
+  //    ユーザーから見て「軸となる通変星」が表示箇所によってブレない構造にする。
+  //    正統派四柱推命で「軸となる先天的気質」とされる月支元命を統一採用。
+  //    算出失敗時は null を返し、各セクション側でフォールバック処理。
+  const selfGenmei = (() => {
+    try {
+      return _synGetGenmei(
+        myCalc?.pillars?.day?.kan,
+        myCalc?.pillars?.month?.shi,
+        myCalc?.pillars?.month?.daysFromSetsu
+      );
+    } catch (e) {
+      console.warn('[synthesis] selfGenmei calc error:', e);
+      return null;
+    }
+  })();
+  const partnerGenmei = (() => {
+    try {
+      return _synGetGenmei(
+        ptCalc?.pillars?.day?.kan,
+        ptCalc?.pillars?.month?.shi,
+        ptCalc?.pillars?.month?.daysFromSetsu
+      );
+    } catch (e) {
+      console.warn('[synthesis] partnerGenmei calc error:', e);
+      return null;
+    }
+  })();
+
+  // ── 1. self ─────────────────────────────────────────
+  try {
+    const dayKan = myCalc.pillars.day.kan;
+    const topGod = myCalc.topGod;            // 全柱集計の最頻通変星 (debug用に保持)
+    // 元命 = 月支元命: 月柱蔵干 (節入り日数で 余気/中気/本気 から1つ選定) × 日干 → 通変星
+    //   四柱推命の正統な格局判定は月支元命が主 (複数流派一致)。
+    //   genmei は '比肩'〜'印綬' を返す (genmeiText._tsuhenStar は '印綬' を返すので正規化不要)
+    const genmei = selfGenmei;  // 関数冒頭で共通算出済を再利用
+    const identity = (myMbtiFull && myMbtiFull.indexOf('-') >= 0)
+      ? myMbtiFull.split('-')[1].charAt(0) : null;
+    const alignment = _judgeMbtiAlignment(myGogyo, myBase);
+
+    // 格局: 3段階 fallback で辞書を引く（基準を topGod → genmei に変更）
+    //   ① genmei + '格' (例: '印綬' → '印綬格')   — 元命ベース個別化 10種
+    //   ② engine.kakukyoku.name (例: '普通格局' / '従旺格(◯旺)' → '従旺格')
+    //   ③ default (安全網)
+    const genmeiKey = genmei ? (genmei + '格') : null;
+    let engineKakuName = (myCalc.kakukyoku && myCalc.kakukyoku.name) || null;
+    let engineKakuKey  = engineKakuName;
+    if (engineKakuKey && engineKakuKey.indexOf('従旺') >= 0) engineKakuKey = '従旺格';
+    const kkEntry =
+      (genmeiKey && D.kakukyoku[genmeiKey])
+      || (engineKakuKey && D.kakukyoku[engineKakuKey])
+      || D.kakukyoku.default;
+    const kkLabel = (genmeiKey && D.kakukyoku[genmeiKey]) ? genmeiKey
+                  : (engineKakuKey && D.kakukyoku[engineKakuKey]) ? engineKakuKey
+                  : (engineKakuName || '普通格局');
+    const kkBasis = (genmeiKey && D.kakukyoku[genmeiKey]) ? 'genmei'
+                  : (engineKakuKey && D.kakukyoku[engineKakuKey]) ? 'engineKakukyoku'
+                  : 'default';
+
+    const dmEntry = D.dayMaster[dayKan];
+    // [動機] も元命ベースに変更（他セクションと一貫性確保）
+    const tgEntry = genmei ? (D.topGod[genmei] || D.topGod.default) : null;
+    const mbtiEntry = (myBase && alignment) ? D.mbtiAlignment[myBase + '_' + alignment] : null;
+    const idEntry = (identity && alignment) ? D.identityModifier[identity + '_' + alignment] : null;
+
+    const parts = [];
+    // [0] 日主
+    if (dmEntry) parts.push(dmEntry.nature + ' ' + dmEntry.trait);
+    // [1] 格局 (元命ベース 3段 fallback)
+    if (kkEntry) {
+      const suffix = (engineKakuName && engineKakuName !== kkLabel) ? ('(' + engineKakuName + ')') : '';
+      parts.push('あなたの格局は「' + kkLabel + '」' + suffix + '──' + kkEntry.essence + ' ' + kkEntry.scene);
+    }
+    // [2] 動機 (元命ベース。「最強通変星」表記は維持しつつ元命を採用)
+    if (tgEntry && genmei) {
+      parts.push('最強通変星は「' + genmei + '」ンダ。' + tgEntry.motivation + ' ' + tgEntry.behavior);
+    }
+    // [3] MBTI × 命式
+    if (mbtiEntry) {
+      let mbtiPart = 'MBTIは「' + (myMbtiFull || myBase) + '」── ' + mbtiEntry.summary;
+      if (mbtiEntry.strength) mbtiPart += ' ' + mbtiEntry.strength;
+      if (mbtiEntry.detail) mbtiPart += ' ' + mbtiEntry.detail;
+      if (idEntry) mbtiPart += ' ' + idEntry;
+      parts.push(mbtiPart);
+    }
+
+    sections.self = {
+      title: 'あなたの命式 × MBTI',
+      body: parts.join('\n'),
+      meta: {
+        dayMaster: dayKan,
+        genmei,                         // 元命 (月支元命) — 格局/動機の判定基準
+        topGod,                         // 全柱集計最頻通変星 (debug 用に保持)
+        kakukyoku: kkLabel,             // 採用された格局ラベル
+        engineKakukyoku: engineKakuName, // engine 出力 (普通格局/従旺格)
+        kakukyokuBasis: kkBasis,        // どの fallback 段で決まったか ('genmei' | 'engineKakukyoku' | 'default')
+        mbti: myBase,
+        identity,
+        alignment,
+      },
+    };
+  } catch (e) { console.warn('[synthesis] self section error:', e); }
+
+  // ── 2. partner ──────────────────────────────────────
+  try {
+    const dayKan = ptCalc.pillars.day.kan;
+    const topGod = ptCalc.topGod;
+    const genmei = partnerGenmei;  // 関数冒頭で共通算出済を再利用
+    const identity = (ptMbtiFull && ptMbtiFull.indexOf('-') >= 0)
+      ? ptMbtiFull.split('-')[1].charAt(0) : null;
+    const alignment = _judgeMbtiAlignment(ptGogyo, ptBase);
+
+    // 格局: 3段階 fallback (self と同じ仕様、元命ベース)
+    const genmeiKey = genmei ? (genmei + '格') : null;
+    let engineKakuName = (ptCalc.kakukyoku && ptCalc.kakukyoku.name) || null;
+    let engineKakuKey  = engineKakuName;
+    if (engineKakuKey && engineKakuKey.indexOf('従旺') >= 0) engineKakuKey = '従旺格';
+    const kkEntry =
+      (genmeiKey && D.kakukyoku[genmeiKey])
+      || (engineKakuKey && D.kakukyoku[engineKakuKey])
+      || D.kakukyoku.default;
+    const kkLabel = (genmeiKey && D.kakukyoku[genmeiKey]) ? genmeiKey
+                  : (engineKakuKey && D.kakukyoku[engineKakuKey]) ? engineKakuKey
+                  : (engineKakuName || '普通格局');
+    const kkBasis = (genmeiKey && D.kakukyoku[genmeiKey]) ? 'genmei'
+                  : (engineKakuKey && D.kakukyoku[engineKakuKey]) ? 'engineKakukyoku'
+                  : 'default';
+
+    const dmEntry = D.dayMaster[dayKan];
+    const tgEntry = genmei ? (D.topGod[genmei] || D.topGod.default) : null;
+    const mbtiEntry = (ptBase && alignment) ? D.mbtiAlignment[ptBase + '_' + alignment] : null;
+    const idEntry = (identity && alignment) ? D.identityModifier[identity + '_' + alignment] : null;
+
+    const parts = [];
+    if (dmEntry) parts.push(dmEntry.nature + ' ' + dmEntry.trait);
+    if (kkEntry) {
+      const suffix = (engineKakuName && engineKakuName !== kkLabel) ? ('(' + engineKakuName + ')') : '';
+      parts.push('相手の格局は「' + kkLabel + '」' + suffix + '──' + kkEntry.essence + ' ' + kkEntry.scene);
+    }
+    if (tgEntry && genmei) {
+      parts.push('相手の最強通変星は「' + genmei + '」ンダ。' + tgEntry.motivation + ' ' + tgEntry.behavior);
+    }
+    if (mbtiEntry) {
+      let mbtiPart = '相手のMBTIは「' + (ptMbtiFull || ptBase) + '」── ' + mbtiEntry.summary;
+      if (mbtiEntry.strength) mbtiPart += ' ' + mbtiEntry.strength;
+      if (mbtiEntry.detail) mbtiPart += ' ' + mbtiEntry.detail;
+      if (idEntry) mbtiPart += ' ' + idEntry;
+      parts.push(mbtiPart);
+    }
+
+    sections.partner = {
+      title: '相手の命式 × MBTI',
+      body: parts.join('\n'),
+      meta: {
+        dayMaster: dayKan,
+        genmei,
+        topGod,
+        kakukyoku: kkLabel,
+        engineKakukyoku: engineKakuName,
+        kakukyokuBasis: kkBasis,
+        mbti: ptBase,
+        identity,
+        alignment,
+      },
+    };
+  } catch (e) { console.warn('[synthesis] partner section error:', e); }
+
+  // ── 3. fiveElement ──────────────────────────────────
+  try {
+    const pairKey = (myGogyo && ptGogyo) ? (myGogyo + '_' + ptGogyo) : null;
+    const pair = pairKey ? D.fiveElementPair[pairKey] : null;
+    const balanceType = _judgeElementBalanceType(myCalc.gokyo, ptCalc.gokyo);
+    const balanceData = D.elementBalance[balanceType];
+    // Phase 3b: elementBalance は { core, nature, depth, caution, practice } の 5 フィールド
+    // object 構造に拡充された。\n\n で連結して 5 段落の balanceText を作る。
+    // 旧 string 構造にも後方互換フォールバックあり。
+    const balanceText = (balanceData && typeof balanceData === 'object')
+      ? [balanceData.core, balanceData.nature, balanceData.depth, balanceData.caution, balanceData.practice]
+          .filter(Boolean)
+          .join('\n')
+      : String(balanceData || '');
+    const fiveType = _judgeFiveElementType(myGogyo, ptGogyo);
+
+    // Phase 3b: fiveElementPair も { core, nature, depth, caution, practice } の
+    // 5 フィールド object 構造に拡充。core の有無で新旧を判別して連結する。
+    // 旧 { intro, detail } 2 フィールド構造にも後方互換フォールバックあり。
+    let pairText = '';
+    if (pair && typeof pair === 'object') {
+      if (pair.core) {
+        pairText = [pair.core, pair.nature, pair.depth, pair.caution, pair.practice]
+          .filter(Boolean)
+          .join('\n');
+      } else {
+        pairText = [pair.intro, pair.detail].filter(Boolean).join('\n');
+      }
+    }
+
+    const parts = [];
+    if (pairText) parts.push(pairText);
+    if (balanceText) parts.push(balanceText);
+
+    sections.fiveElement = {
+      title: '五行ペア',
+      body: parts.join('\n'),
+      meta: { selfElement: myGogyo, partnerElement: ptGogyo, pairKey, balanceType, balanceData, fiveType, fePairData: pair },
+    };
+  } catch (e) { console.warn('[synthesis] fiveElement section error:', e); }
+
+  // ── 4. twelveStage ──────────────────────────────────
+  // Phase 3b: twelveStagePair 辞書が { core, nature, depth, caution, practice } の
+  // 5 フィールド object 構造に拡充された。\n\n で連結して 5 段落の body を作る。
+  // 旧 string 構造にも後方互換フォールバックあり。
+  try {
+    const selfStage = myCalc.pillars.day.juniunsei;
+    const partnerStage = ptCalc.pillars.day.juniunsei;
+    const stageType = _judgeTwelveStagePairType(selfStage, partnerStage);
+    const stageData = D.twelveStagePair[stageType];
+    const stageBody = (stageData && typeof stageData === 'object')
+      ? [stageData.core, stageData.nature, stageData.depth, stageData.caution, stageData.practice]
+          .filter(Boolean)
+          .join('\n')
+      : String(stageData || '');
+    sections.twelveStage = {
+      title: '十二運星ペア',
+      body: stageBody,
+      meta: { selfStage, partnerStage, type: stageType,
+              selfEnergy: _JUNIU_ENERGY[selfStage], partnerEnergy: _JUNIU_ENERGY[partnerStage],
+              data: stageData },
+    };
+  } catch (e) { console.warn('[synthesis] twelveStage section error:', e); }
+
+  // ── 5. topGodPair ──────────────────────────────────
+  // ⚠ self/partner 双方の【月支元命】(selfGenmei/partnerGenmei)で統一。
+  //    sections.self/partner と同じ概念で揃え、表示上の矛盾を排除。
+  //    元命取得失敗時のみ jisshinCount top をフォールバック。
+  try {
+    const selfTg = selfGenmei || _normalizeTsuhenForDict(myCalc.topGod);
+    const partnerTg = partnerGenmei || _normalizeTsuhenForDict(ptCalc.topGod);
+    const data = (selfTg && partnerTg)
+      ? _synGetTopGodPair(selfTg, partnerTg)
+      : (D.topGodPair && D.topGodPair.default);
+    // Phase 3b: topGodPair 辞書が { core, nature, depth, caution, practice } の
+    // 5 フィールド object 構造に拡充された。旧 { core, detail, warning } にも
+    // 後方互換でフォールバック(nature/caution 不在時に detail/warning を使用)。
+    const parts = [];
+    if (data) {
+      if (data.core) parts.push(data.core);
+      if (data.nature) parts.push(data.nature);
+      else if (data.detail) parts.push(data.detail);  // 旧構造フォールバック
+      if (data.depth) parts.push(data.depth);
+      if (data.caution) parts.push(data.caution);
+      else if (data.warning) parts.push(data.warning); // 旧構造フォールバック
+      if (data.practice) parts.push(data.practice);
+    }
+    sections.topGodPair = {
+      title: '通変星ペア',
+      body: parts.join('\n'),
+      meta: {
+        selfTopGod: selfTg,              // 採用された通変星(元命優先、失敗時のみ jisshinCount top)
+        partnerTopGod: partnerTg,
+        selfGenmei,                      // 元命算出結果(null の場合あり)
+        partnerGenmei,
+        selfJisshinTop: _normalizeTsuhenForDict(myCalc.topGod),    // jisshinCount top(参考情報)
+        partnerJisshinTop: _normalizeTsuhenForDict(ptCalc.topGod),
+        basis: (selfGenmei && partnerGenmei) ? 'genmei' : 'jisshinTop_fallback',
+        data,
+      },
+    };
+  } catch (e) { console.warn('[synthesis] topGodPair section error:', e); }
+
+  // ── 6. kishin ───────────────────────────────────────
+  // Phase 3b: kishinPair 辞書が { core, nature, depth, caution, practice } の
+  // 5 フィールド object 構造に拡充された。\n\n で連結して 5 段落の body を作る。
+  // 旧 string 構造にも後方互換フォールバックあり。
+  try {
+    const selfKishin = (myCalc.kishin || []);
+    const partnerKishin = (ptCalc.kishin || []);
+    const kishinType = _judgeKishinPairType(selfKishin, partnerKishin);
+    const kishinData = D.kishinPair[kishinType];
+    const kishinBody = (kishinData && typeof kishinData === 'object')
+      ? [kishinData.core, kishinData.nature, kishinData.depth, kishinData.caution, kishinData.practice]
+          .filter(Boolean)
+          .join('\n')
+      : String(kishinData || '');
+    sections.kishin = {
+      title: '喜神ペア',
+      body: kishinBody,
+      meta: { selfKishin, partnerKishin, type: kishinType, data: kishinData },
+    };
+  } catch (e) { console.warn('[synthesis] kishin section error:', e); }
+
+  // ── 7. specialStar ─────────────────────────────────
+  // Phase 3b: specialStarPair 辞書が { core, nature, depth, caution, practice } の
+  // 5 フィールド object 構造に拡充された。\n\n で連結して 5 段落の body を作る。
+  // 旧 { intro, synergy } 2 フィールド構造にも後方互換フォールバックあり
+  // (core が無ければ intro/synergy を使用)。
+  try {
+    const selfStars = myCalc.tokuseiboshi || [];
+    const partnerStars = ptCalc.tokuseiboshi || [];
+    const picked = _pickSpecialStarPair(selfStars, partnerStars);
+    const data = picked.data || (D.specialStarPair && D.specialStarPair.default);
+    const parts = [];
+    if (data) {
+      if (data.core) {
+        // 新構造(5 フィールド)
+        if (data.core) parts.push(data.core);
+        if (data.nature) parts.push(data.nature);
+        if (data.depth) parts.push(data.depth);
+        if (data.caution) parts.push(data.caution);
+        if (data.practice) parts.push(data.practice);
+      } else {
+        // 旧構造フォールバック(2 フィールド)
+        if (data.intro) parts.push(data.intro);
+        if (data.synergy) parts.push(data.synergy);
+      }
+    }
+    sections.specialStar = {
+      title: '特殊星ペア',
+      body: parts.join('\n'),
+      meta: { selfStars, partnerStars,
+              pickedSelf: picked.selfStar, pickedPartner: picked.partnerStar, data },
+    };
+  } catch (e) { console.warn('[synthesis] specialStar section error:', e); }
+
+  // ── 8. annualFortune ───────────────────────────────
+  // ⚠ Synthesis から切り離し済 (2026-04)。流年タイムラインは将来「独立セクション/タブ」として
+  //    実装する方針。データ生成ロジック (_analyzeAnnualFortune) と辞書テンプレを使う未来の
+  //    実装で本ブロックを復活させる予定なので、削除ではなくコメントアウトで保持。
+  /*
+  try {
+    const af = _analyzeAnnualFortune(myCalc, ptCalc);
+    const body = af.yearNotes.map(n => n.text).filter(Boolean).join('\n');
+    sections.annualFortune = {
+      title: 'これから巡る運勢期',
+      body,
+      meta: {
+        yearNotes: af.yearNotes,
+        deepBondYears: af.deepBondYears,
+        tensionYears: af.tensionYears,
+        voidPeriod: af.voidPeriod,
+      },
+      // 利便のためトップにも公開（仕様書 3節）
+      deepBondYears: af.deepBondYears,
+      tensionYears: af.tensionYears,
+      voidPeriod: af.voidPeriod,
+    };
+  } catch (e) { console.warn('[synthesis] annualFortune section error:', e); }
+  */
+
+  // ── 9. conclusion ──────────────────────────────────
+  // Phase 3b + 正統派判定ロジック:
+  //   辞書は { core, nature, depth, caution, practice } の 5 フィールド構造。
+  //   判定は日支六合/三合 + 喜神一致度を加味して fast_bond/cyclic/slow_burn を
+  //   バランス良く分布させる。
+  try {
+    // 拡張判定要素: 日支・喜神一致度(kishin セクションは別 try scope なので再計算)
+    const selfShi = (myCalc.pillars && myCalc.pillars.day) ? myCalc.pillars.day.shi : null;
+    const partnerShi = (ptCalc.pillars && ptCalc.pillars.day) ? ptCalc.pillars.day.shi : null;
+    const kishinMatch = _judgeKishinPairType(myCalc.kishin || [], ptCalc.kishin || []);
+
+    const concType = _judgeConclusionType(gogyoRel, mbtiCompatLabel, {
+      selfShi,
+      partnerShi,
+      kishinMatch,
+    });
+    const concData = D.conclusion[concType] || D.conclusion.slow_burn;
+    const concBody = (concData && typeof concData === 'object')
+      ? [concData.core, concData.nature, concData.depth, concData.caution, concData.practice]
+          .filter(Boolean)
+          .join('\n')
+      : String(concData || '');
+    sections.conclusion = {
+      title: '結論',
+      body: concBody,
+      meta: {
+        type: concType,
+        gogyoRel,
+        mbtiCompatLabel,
+        selfShi,
+        partnerShi,
+        shiHarmony: _isShiHarmony(selfShi, partnerShi),
+        kishinMatch,
+        data: concData,
+      },
+    };
+  } catch (e) { console.warn('[synthesis] conclusion section error:', e); }
+
+  return sections;
+}
+
+// トップレベル meta（判定サマリ） — Phase 3 UI バッジ表示用ショートカット
+function _buildSynthesisMeta(sections) {
+  const m = {
+    selfAlignment:    sections.self        && sections.self.meta        ? sections.self.meta.alignment        : null,
+    partnerAlignment: sections.partner     && sections.partner.meta     ? sections.partner.meta.alignment     : null,
+    fiveElementType:  sections.fiveElement && sections.fiveElement.meta ? sections.fiveElement.meta.fiveType  : null,
+    stagePairType:    sections.twelveStage && sections.twelveStage.meta ? sections.twelveStage.meta.type      : null,
+    kishinRelation:   sections.kishin      && sections.kishin.meta      ? sections.kishin.meta.type           : null,
+    conclusionType:   sections.conclusion  && sections.conclusion.meta  ? sections.conclusion.meta.type       : null,
+  };
+  return m;
+}
+
+// ══════════════════════════════════════════════════════════════
 //  Main export function
 // ══════════════════════════════════════════════════════════════
 export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
@@ -176,9 +1070,9 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
     else if (myGogyo === ptGogyo) { baseScore = 75; compat_type = '比和型'; }
     else if (KOKU[myGogyo] === ptGogyo || KOKU[ptGogyo] === myGogyo) { baseScore = 55; compat_type = '相剋型'; }
 
-    var loveScore = Math.min(99, baseScore + 3);
-    var trustScore = Math.min(99, baseScore - 2);
-    var growthScore = Math.min(99, baseScore + (compat_type === '相剋型' ? 12 : -2));
+    var loveScore = Math.min(100, baseScore + 3);
+    var trustScore = Math.min(100, baseScore - 2);
+    var growthScore = Math.min(100, baseScore + (compat_type === '相剋型' ? 12 : -2));
 
     var scoreLabel = baseScore >= 80 ? 'とても強い相性ンダ ✨' : baseScore >= 70 ? 'よい相性ンダ🐼' : baseScore >= 60 ? 'お互いを高め合える関係ンダ' : '刺激し合える関係ンダ';
     var vsLabel = compat_type === '相生型' ? '引き合うタイプ' : compat_type === '比和型' ? '似た者同士タイプ' : compat_type === '相剋型' ? '刺激し合うタイプ' : 'バランスタイプ';
@@ -239,7 +1133,7 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
     var myDayShi = myCalc.pillars.day.shi;
     var ptDayShi = ptCalc.pillars.day.shi;
     var hikiai = result.baseScore;
-    if (SHIGOU[myDayShi] === ptDayShi) hikiai = Math.min(99, hikiai + 10);
+    if (SHIGOU[myDayShi] === ptDayShi) hikiai = Math.min(100, hikiai + 10);
     if (ROKUCHUU[myDayShi] === ptDayShi) hikiai = Math.max(20, hikiai - 12);
     // 干合＋大吉縁判定（陽干男性 × 陰干女性）
     if (KANGO[myCalc.pillars.day.kan] === ptCalc.pillars.day.kan) {
@@ -250,7 +1144,7 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
       var _isDK3 = (myGender3 === 'm' && ptGender3 === 'f' &&
                     YOGAN3.indexOf(myCalc.pillars.day.kan) >= 0 &&
                     INGAN3.indexOf(ptCalc.pillars.day.kan) >= 0);
-      hikiai = Math.min(99, hikiai + (_isDK3 ? 15 : 8));
+      hikiai = Math.min(100, hikiai + (_isDK3 ? 15 : 8));
     }
 
     // MBTI スコア（16×16ベース + A/Tサブタイプ補正）
@@ -262,7 +1156,7 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
       var ptSub = result.ptMbti.match(/-(A|T)$/);
       var myAT = mySub ? mySub[1] : 'A';
       var ptAT = ptSub ? ptSub[1] : 'A';
-      if (myAT === 'A' && ptAT === 'A') mbtiScore = Math.min(99, mbtiScore + 3);       // 安定×安定
+      if (myAT === 'A' && ptAT === 'A') mbtiScore = Math.min(100, mbtiScore + 3);       // 安定×安定
       else if (myAT === 'T' && ptAT === 'T') mbtiScore = Math.max(20, mbtiScore - 3);  // 感情的×感情的
       // A×T / T×A は±0（バランス型）
     }
@@ -286,7 +1180,7 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
     var _kangoType = null;
     var _isDaikichien = false;
     if (myCalc && ptCalc) {
-      if (SHIGOU[myCalc.pillars.day.shi] === ptCalc.pillars.day.shi) score_day = Math.min(99, score_day + 10);
+      if (SHIGOU[myCalc.pillars.day.shi] === ptCalc.pillars.day.shi) score_day = Math.min(100, score_day + 10);
       else if (ROKUCHUU[myCalc.pillars.day.shi] === ptCalc.pillars.day.shi) score_day = Math.max(20, score_day - 12);
 
       var _mDK = myCalc.pillars.day.kan;
@@ -301,9 +1195,9 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
         _isDaikichien = (myGender4 === 'm' && ptGender4 === 'f' &&
                           YOGAN.indexOf(_mDK) >= 0 && INGAN.indexOf(_pDK) >= 0);
         if (_isDaikichien) {
-          score_day = Math.min(99, score_day + 15); // 大吉縁ボーナス
+          score_day = Math.min(100, score_day + 15); // 大吉縁ボーナス
         } else {
-          score_day = Math.min(99, score_day + 8);  // 通常の干合
+          score_day = Math.min(100, score_day + 8);  // 通常の干合
         }
         // 干合タイプ名の判定
         var KANGO_NAMES = {
@@ -372,12 +1266,12 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
         && ROKUJUKANSHI.indexOf(_myKanshi) >= 0
         && ROKUJUKANSHI.indexOf(_ptKanshi) >= 0;
       if (_isTenchitokugo) {
-        score_day = Math.min(99, score_day + 20);
+        score_day = Math.min(100, score_day + 20);
       }
     }
 
     // 最終clamp
-    score_day = Math.max(20, Math.min(99, score_day));
+    score_day = Math.max(20, Math.min(100, score_day));
 
     result.kangoType = _kangoType;
     result.isDaikichien = _isDaikichien;
@@ -388,11 +1282,11 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
     // 要素3: 月柱相性（感情リズム）
     var score_month = result.baseScore;
     if (myCalc && ptCalc) {
-      if (SHIGOU[myCalc.pillars.month.shi] === ptCalc.pillars.month.shi) score_month = Math.min(99, score_month + 10);
+      if (SHIGOU[myCalc.pillars.month.shi] === ptCalc.pillars.month.shi) score_month = Math.min(100, score_month + 10);
       else if (ROKUCHUU[myCalc.pillars.month.shi] === ptCalc.pillars.month.shi) score_month = Math.max(20, score_month - 10);
-      if (KANGO[myCalc.pillars.month.kan] === ptCalc.pillars.month.kan) score_month = Math.min(99, score_month + 6);
+      if (KANGO[myCalc.pillars.month.kan] === ptCalc.pillars.month.kan) score_month = Math.min(100, score_month + 6);
       var myMG2 = result.myGogyo, ptMG2 = result.ptGogyo;
-      if (SEI[myMG2] === ptMG2 || SEI[ptMG2] === myMG2) score_month = Math.min(99, score_month + 5);
+      if (SEI[myMG2] === ptMG2 || SEI[ptMG2] === myMG2) score_month = Math.min(100, score_month + 5);
     }
 
     // 要素4: 年柱相性（根本の気質）
@@ -401,10 +1295,10 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
       var myYearGogyo = GOGYO[JIKKAN.indexOf(myCalc.pillars.year.kan)];
       var ptYearGogyo = GOGYO[JIKKAN.indexOf(ptCalc.pillars.year.kan)];
       if (myYearGogyo && ptYearGogyo) {
-        if (SEI[myYearGogyo] === ptYearGogyo || SEI[ptYearGogyo] === myYearGogyo) score_year = Math.min(99, score_year + 8);
-        else if (myYearGogyo === ptYearGogyo) score_year = Math.min(99, score_year + 3);
+        if (SEI[myYearGogyo] === ptYearGogyo || SEI[ptYearGogyo] === myYearGogyo) score_year = Math.min(100, score_year + 8);
+        else if (myYearGogyo === ptYearGogyo) score_year = Math.min(100, score_year + 3);
       }
-      if (SHIGOU[myCalc.pillars.year.shi] === ptCalc.pillars.year.shi) score_year = Math.min(99, score_year + 5);
+      if (SHIGOU[myCalc.pillars.year.shi] === ptCalc.pillars.year.shi) score_year = Math.min(100, score_year + 5);
     }
 
     // 要素5: 時柱相性（行動リズム）— 不明時はbaseScoreで代用
@@ -412,7 +1306,7 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
     if (myCalc && ptCalc && myCalc.pillars.hour && ptCalc.pillars.hour) {
       var hourLabel = myCalc.pillars.hour.jisshin;
       if (hourLabel && hourLabel !== '─（日主）' && hourLabel !== '─') {
-        if (SHIGOU[myCalc.pillars.hour.shi] === ptCalc.pillars.hour.shi) score_hour = Math.min(99, score_hour + 8);
+        if (SHIGOU[myCalc.pillars.hour.shi] === ptCalc.pillars.hour.shi) score_hour = Math.min(100, score_hour + 8);
         else if (ROKUCHUU[myCalc.pillars.hour.shi] === ptCalc.pillars.hour.shi) score_hour = Math.max(20, score_hour - 8);
       }
     }
@@ -425,7 +1319,7 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
       score_year * 0.10 +
       score_hour * 0.10
     );
-    birthCompatScore = Math.max(20, Math.min(99, birthCompatScore));
+    birthCompatScore = Math.max(20, Math.min(100, birthCompatScore));
 
     result.score_gogyo = score_gogyo;
     result.score_day = score_day;
@@ -450,7 +1344,7 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
     var _ptMbtiStr = result.ptMbti || '';
     var _myAT5 = /-(A|T)$/.test(_myMbtiStr) ? _myMbtiStr.slice(-1) : null;
     var _ptAT5 = /-(A|T)$/.test(_ptMbtiStr) ? _ptMbtiStr.slice(-1) : null;
-    if (_myAT5 === 'A' && _ptAT5 === 'A') mbt_n = Math.min(99, mbt_n + 3);
+    if (_myAT5 === 'A' && _ptAT5 === 'A') mbt_n = Math.min(100, mbt_n + 3);
     else if (_myAT5 === 'T' && _ptAT5 === 'T') mbt_n = Math.max(20, mbt_n - 3);
 
     result.bcs_n = bcs_n;
@@ -477,11 +1371,12 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
       var _KO = { 木: '土', 火: '金', 土: '水', 金: '木', 水: '火' };
       function _jis10(niI, tiI) {
         var ng = _GY[niI], tg = _GY[tiI], s = (niI % 2) === (tiI % 2);
+        // _SE=生む先, _KO=剋す先  生我→印, 克我→官 (修正: 旧コードは官/印が逆転していた)
         if (ng === tg) return s ? '比肩' : '劫財';
         if (_SE[ng] === tg) return s ? '食神' : '傷官';
         if (_KO[ng] === tg) return s ? '偏財' : '正財';
-        if (_SE[tg] === ng) return s ? '偏官' : '正官';
-        if (_KO[tg] === ng) return s ? '偏印' : '正印';
+        if (_SE[tg] === ng) return s ? '偏印' : '正印';
+        if (_KO[tg] === ng) return s ? '偏官' : '正官';
         return '比肩';
       }
       var myKanI = _JIKKAN_IDX[myCalc.pillars.day.kan];
@@ -514,28 +1409,28 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
     var weightLabel = '';
     if (rel === '恋人・パートナー') {
       wB = 0.25; wH = 0.25; wM = 0.25; wL = 0.25;
-      weightLabel = '宿命の縁25% + 引き合う力25% + MBTI25% + 恋愛運25%（恋人）';
+      weightLabel = '宿命の縁25% + 引き合う力25% + MBTI25% + 恋愛運25% + 恋愛補完加点';
     } else if (rel === '気になる人') {
       wB = 0.25; wH = 0.35; wM = 0.15; wL = 0.25;
-      weightLabel = '宿命の縁25% + 引き合う力35% + MBTI15% + 恋愛運25%（気になる人）';
+      weightLabel = '宿命の縁25% + 引き合う力35% + MBTI15% + 恋愛運25% + 恋愛補完加点';
     } else if (rel === '元交際相手') {
       wB = 0.25; wH = 0.45; wM = 0.05; wL = 0.25;
-      weightLabel = '宿命の縁25% + 引き合う力45% + MBTI5% + 恋愛運25%（元交際相手）';
+      weightLabel = '宿命の縁25% + 引き合う力45% + MBTI5% + 恋愛運25% + 恋愛補完加点';
     } else if (rel === '配偶者' || rel === '婚約者') {
       wB = 0.30; wH = 0.20; wM = 0.30; wL = 0.20;
-      weightLabel = '宿命の縁30% + 引き合う力20% + MBTI30% + 恋愛運20%（' + rel + '）';
+      weightLabel = '宿命の縁30% + 引き合う力20% + MBTI30% + 恋愛運20% + 恋愛補完加点';
     } else if (rel === '友人') {
       wB = 0.35; wH = 0.25; wM = 0.40; wL = 0;
-      weightLabel = '宿命の縁35% + 引き合う力25% + MBTI40%（友人）';
+      weightLabel = '宿命の縁35% + 引き合う力25% + MBTI40%';
     } else if (rel === '職場の人') {
       wB = 0.25; wH = 0.20; wM = 0.55; wL = 0;
-      weightLabel = '宿命の縁25% + 引き合う力20% + MBTI55%（職場の人）';
+      weightLabel = '宿命の縁25% + 引き合う力20% + MBTI55%';
     } else if (rel === '家族') {
       wB = 0.60; wH = 0.25; wM = 0.15; wL = 0;
-      weightLabel = '宿命の縁60% + 引き合う力25% + MBTI15%（家族）';
+      weightLabel = '宿命の縁60% + 引き合う力25% + MBTI15%';
     } else {
       wB = 0.30; wH = 0.25; wM = 0.25; wL = 0.20;
-      weightLabel = '宿命の縁30% + 引き合う力25% + MBTI25% + 恋愛運20%';
+      weightLabel = '宿命の縁30% + 引き合う力25% + MBTI25% + 恋愛運20% + 恋愛補完加点';
     }
 
     result.rel = rel;
@@ -559,9 +1454,9 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
     var _sangouResult = null;
     var _hangouResult = null;
     if (myCalc && ptCalc) {
-      if (SHIGOU[myCalc.pillars.month.shi] === ptCalc.pillars.month.shi) attractScore = Math.min(99, attractScore + 10);
+      if (SHIGOU[myCalc.pillars.month.shi] === ptCalc.pillars.month.shi) attractScore = Math.min(100, attractScore + 10);
       var _myMG = GOGYO[result.myKanIdx], _ptMG = GOGYO[result.ptKanIdx];
-      if (SEI[_myMG] === _ptMG || SEI[_ptMG] === _myMG) attractScore = Math.min(99, attractScore + 8);
+      if (SEI[_myMG] === _ptMG || SEI[_ptMG] === _myMG) attractScore = Math.min(100, attractScore + 8);
 
       // 三合・半会: 2人の日支・月支・年支（計6つ）
       var _allShis7 = [
@@ -582,12 +1477,12 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
         }
       }
       if (_sangouResult) {
-        attractScore = Math.min(99, attractScore + 12);
+        attractScore = Math.min(100, attractScore + 12);
       } else if (_hangouResult) {
-        attractScore = Math.min(99, attractScore + 6);
+        attractScore = Math.min(100, attractScore + 6);
       }
     }
-    attractScore = Math.max(20, Math.min(99, attractScore));
+    attractScore = Math.max(20, Math.min(100, attractScore));
     result.attractScore = attractScore;
     result.sangou = _sangouResult;
     result.hangou = _hangouResult;
@@ -697,7 +1592,7 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
     astroItems.push({ icon: day_icon, title: day_title, badgeHtml: badge(s2), subtitle: '生まれ日の相性 · ' + mDK + mDS + ' × ' + pDK + pDS, desc: day_desc, score: s2, isAttractRow: false });
 
     // ── 項目3: 引き合う力（支合・干合の統合スコア） ──
-    var s3 = Math.max(20, Math.min(99, result.attractScore));
+    var s3 = Math.max(20, Math.min(100, result.attractScore));
     var attr_title, attr_desc, attr_icon;
     var hasShigou = SHIGOU[mDS] === pDS;
     var hasKango = KANGO[mDK] === pDK;
@@ -775,15 +1670,15 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
     var s4_base = baseScore8;
     var kishin_icon, kishin_title, kishin_desc, s4;
     if (ptGogyoInMyKs && myGogyoInPtKs) {
-      s4 = Math.min(99, s4_base + 20);
+      s4 = Math.min(100, s4_base + 20);
       kishin_icon = '⭐';
       kishin_title = ptName8 + 'とあなたが「互いの運気アップの存在」';
     } else if (ptGogyoInMyKs) {
-      s4 = Math.min(99, s4_base + 15);
+      s4 = Math.min(100, s4_base + 15);
       kishin_icon = '⚖️';
       kishin_title = ptName8 + 'があなたの「運気アップの存在」';
     } else if (myGogyoInPtKs) {
-      s4 = Math.min(99, s4_base + 10);
+      s4 = Math.min(100, s4_base + 10);
       kishin_icon = '⚖️';
       kishin_title = 'あなたが' + ptName8 + 'の「運気アップの存在」';
     } else {
@@ -791,7 +1686,7 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
       kishin_icon = '🌿';
       kishin_title = '喜神の特別な一致はないが安定した関係';
     }
-    s4 = Math.max(20, Math.min(99, s4));
+    s4 = Math.max(20, Math.min(100, s4));
     // スコア帯で文調変化
     if (ptGogyoInMyKs && myGogyoInPtKs) {
       kishin_desc = tonedAstroDesc(s4,
@@ -835,7 +1730,7 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
         '大運の六冲が強く出ている時期ンダ。2人の人生の方向性が真っ向からぶつかりやすく、重要な決断は特に慎重にしてほしいンダよ。この時期を乗り越えれば絆は確実に強くなるンダ🐼'
       );
     } else if (myD && ptD && (SEI[myDG] === ptDG || SEI[ptDG] === myDG)) {
-      s5 = Math.min(99, baseScore8 + 10);
+      s5 = Math.min(100, baseScore8 + 10);
       daiun_icon = '🌊';
       daiun_title = '今の大運の流れが相生 — この時期は追い風';
       daiun_desc = tonedAstroDesc(s5,
@@ -844,7 +1739,7 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
         '大運は相生の関係だが、他の要因がその追い風を弱めているンダ。意識して一緒に動く時間を作ると、相生の力が徐々に感じられるようになるンダよ🐼'
       );
     } else if (myD && ptD && myDG === ptDG) {
-      s5 = Math.min(99, baseScore8 + 5);
+      s5 = Math.min(100, baseScore8 + 5);
       daiun_icon = '🌊';
       daiun_title = '今の大運が比和 — 似た流れの中にいる';
       daiun_desc = tonedAstroDesc(s5,
@@ -862,12 +1757,12 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
         '大運の流れがお互いに作用しにくく、運気的なサポートが薄い時期ンダ。意識して相手を気にかけることが、この時期を乗り越えるカギンダよ🐼'
       );
     }
-    s5 = Math.max(20, Math.min(99, s5));
+    s5 = Math.max(20, Math.min(100, s5));
     astroItems.push({ icon: daiun_icon, title: daiun_title, badgeHtml: badge(s5, s5 < baseScore8 ? 'caution' : ''), subtitle: '長期の運気の流れ · ' + (myD ? myD.ageFrom + '〜' + myD.ageTo + '歳の大運' : '大運不明'), desc: daiun_desc, score: s5, isAttractRow: false });
 
     // ── birthCompatScore を5つのスコアで再計算 ──
     var newBirth = Math.round(s1 * 0.35 + s2 * 0.25 + s3 * 0.20 + s4 * 0.10 + s5 * 0.10);
-    newBirth = Math.max(20, Math.min(99, newBirth));
+    newBirth = Math.max(20, Math.min(100, newBirth));
     var newBirth_n = remapTo(newBirth, 55, 95);
     result.bcs_n = newBirth_n;
 
@@ -877,8 +1772,8 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
     var wB8 = result.wB, wH8 = result.wH, wM8 = result.wM, wL8 = result.wL || 0;
 
     // 恋愛運スコアを先に計算（totalWeightedの要素として使うため）
-    var newLove = Math.min(99, Math.round(bcs_n8 * 0.60 + hik_n8 * 0.25 + mbt_n8 * 0.15));
-    if (compat_type8 === '相生型') newLove = Math.min(99, newLove + 5);
+    var newLove = Math.min(100, Math.round(bcs_n8 * 0.60 + hik_n8 * 0.25 + mbt_n8 * 0.15));
+    if (compat_type8 === '相生型') newLove = Math.min(100, newLove + 5);
     if (compat_type8 === '相剋型') newLove = Math.max(30, newLove - 5);
 
     // 総合スコア = 4要素加重平均（恋愛運なしの続柄は wL=0 なので影響しない）
@@ -902,13 +1797,35 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
   // ══════════════════════════════════════════════════════════════
   try {
     var loveW = result.newLove || result.loveScore || 60;
-    var totalWeighted = Math.round(result.bcs_n * result.wB + result.hik_n * result.wH + result.mbt_n * result.wM + loveW * (result.wL || 0));
+    var totalWeightedBase = Math.round(result.bcs_n * result.wB + result.hik_n * result.wH + result.mbt_n * result.wM + loveW * (result.wL || 0));
     var loveWeighted = loveW;
+
+    // ── 恋人・配偶者向け加点(4 要素)──
+    var _relation9 = (partner && partner.relation) || result.rel || null;
+    var _coupleBonus = _calcCoupleBonus(myCalc, ptCalc, _relation9);
+    var _bonusPoints = _coupleBonus.totalBonus || 0;
+    var totalWeighted = Math.min(100, totalWeightedBase + _bonusPoints);
+
+    // newTotal にも同じ加点を反映(UI 表示側が newTotal を参照するため整合)
+    if (typeof result.newTotal === 'number') {
+      result.newTotal = Math.min(100, result.newTotal + _bonusPoints);
+      result.newLabel = getTonedLabel(result.newTotal, result.genderTone, result.ptName);
+    }
+
     var tagText = getTonedLabel(totalWeighted, result.genderTone, result.ptName);
 
     result.totalWeighted = totalWeighted;
     result.tagText = tagText;
     result.loveWeighted = loveWeighted;
+    result.coupleBonus = {
+      baseTotal: totalWeightedBase,
+      bonusPoints: _bonusPoints,
+      finalTotal: totalWeighted,
+      capped: (totalWeightedBase + _bonusPoints) > 100,
+      applied: _coupleBonus.applied,
+      reason: _coupleBonus.reason || null,
+      details: _coupleBonus.details,
+    };
   } catch (e) {
     console.error('[compatCalcFull] Section 9 error:', e);
   }
@@ -919,9 +1836,9 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
   try {
     var birthScore10 = result.baseScore;
     if (myCalc && ptCalc) {
-      if (SHIGOU[myCalc.pillars.day.shi] === ptCalc.pillars.day.shi) birthScore10 = Math.min(99, birthScore10 + 10);
+      if (SHIGOU[myCalc.pillars.day.shi] === ptCalc.pillars.day.shi) birthScore10 = Math.min(100, birthScore10 + 10);
       else if (ROKUCHUU[myCalc.pillars.day.shi] === ptCalc.pillars.day.shi) birthScore10 = Math.max(20, birthScore10 - 10);
-      if (KANGO[myCalc.pillars.day.kan] === ptCalc.pillars.day.kan) birthScore10 = Math.min(99, birthScore10 + 8);
+      if (KANGO[myCalc.pillars.day.kan] === ptCalc.pillars.day.kan) birthScore10 = Math.min(100, birthScore10 + 8);
     }
 
     var mbtiScore10 = 70;
@@ -932,8 +1849,8 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
     var birthScore_n = remapTo(birthScore10, 55, 95);
     var attractScore_n = remapTo(result.attractScore, 20, 99);
     var mbtiScore_ss_n = mbtiScore10;
-    var loveScore2 = Math.min(99, Math.round((birthScore_n * 0.5 + attractScore_n * 0.3 + mbtiScore_ss_n * 0.2)));
-    if (result.compat_type === '相生型') loveScore2 = Math.min(99, loveScore2 + 5);
+    var loveScore2 = Math.min(100, Math.round((birthScore_n * 0.5 + attractScore_n * 0.3 + mbtiScore_ss_n * 0.2)));
+    if (result.compat_type === '相生型') loveScore2 = Math.min(100, loveScore2 + 5);
     if (result.compat_type === '相剋型') loveScore2 = Math.max(30, loveScore2 - 5);
 
     var _ssInfo = (opts.mbtiEngineReady && result.myMbti && result.ptMbti && result.myMbti !== 'わからない' && result.ptMbti !== 'わからない')
@@ -1000,7 +1917,7 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
     result.attractDetail = {
       finds: finds11,
       scoreBonus: scoreBonus11,
-      findScore: finds11.length > 0 ? Math.min(99, result.attractScore + scoreBonus11) : 68,
+      findScore: finds11.length > 0 ? Math.min(100, result.attractScore + scoreBonus11) : 68,
     };
   } catch (e) {
     console.error('[compatCalcFull] Section 11 error:', e);
@@ -1562,25 +2479,11 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
     var synthesisText = null;
     if (myBase20 && ptBase20) {
       try {
-        // 通変星計算
-        var _calcTsuhen = function (calc) {
-          if (!calc) return null;
-          var p = calc.pillars; if (!p) return null;
-          var cnt = {};
-          var KK = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
-          var GG = ['木', '木', '火', '火', '土', '土', '金', '金', '水', '水'];
-          var ZK = { 子: ['壬', '癸'], 丑: ['己', '癸', '辛'], 寅: ['甲', '丙', '戊'], 卯: ['乙'], 辰: ['戊', '乙', '癸'], 巳: ['丙', '庚', '戊'], 午: ['丁', '己'], 未: ['己', '丁', '乙'], 申: ['庚', '壬', '戊'], 酉: ['辛'], 戌: ['戊', '辛', '丁'], 亥: ['壬', '甲'] };
-          var S2 = { 木: '火', 火: '土', 土: '金', 金: '水', 水: '木' };
-          var K2 = { 木: '土', 火: '金', 土: '水', 金: '木', 水: '火' };
-          var dK = p.day.kan;
-          function ts(n, t) { var ni = KK.indexOf(n), ti = KK.indexOf(t); if (ni < 0 || ti < 0) return null; var ng = GG[ni], tg = GG[ti], s = (ni % 2) === (ti % 2); if (ng === tg) return s ? '比肩' : '劫財'; if (S2[ng] === tg) return s ? '食神' : '傷官'; if (K2[ng] === tg) return s ? '偏財' : '正財'; if (S2[tg] === ng) return s ? '偏官' : '正官'; if (K2[tg] === ng) return s ? '偏印' : '正印'; return '比肩'; }
-          ['year', 'month', 'hour'].forEach(function (k) { if (p[k]) { var t = ts(dK, p[k].kan); if (t) cnt[t] = (cnt[t] || 0) + 1; } });
-          Object.values(p).forEach(function (pp) { if (!pp) return; (ZK[pp.shi] || []).forEach(function (z) { var t = ts(dK, z); if (t) cnt[t] = (cnt[t] || 0) + 0.5; }); });
-          var s = Object.entries(cnt).sort(function (a, b) { return b[1] - a[1]; });
-          return s.length ? s[0][0] : null;
-        };
-        var myTsuhen = _calcTsuhen(myCalc);
-        var ptTsuhen = _calcTsuhen(ptCalc);
+        // 最強通変星 (topGod) はエンジンが計算済み (calcMeishiki の戻り値)
+        // 古い実装は calcCompatDetail 内に _calcTsuhen をローカル定義していたが、
+        // 蔵干分野表の重み付けが反映されないため、エンジン側 SSOT に集約済み。
+        var myTsuhen = (myCalc && myCalc.topGod) || null;
+        var ptTsuhen = (ptCalc && ptCalc.topGod) || null;
         var myKishin20 = myCalc ? (myCalc.kishin || []) : [];
         var ptKishin20 = ptCalc ? (ptCalc.kishin || []) : [];
         var sharedKishin20 = myKishin20.filter(function (g) { return ptKishin20.indexOf(g) >= 0; });
@@ -1718,6 +2621,43 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
       }
     }
 
+    // ── Phase 1+2: セクション Object + 流年 + トップレベル meta ──
+    var synthSections20 = {};
+    var synthMeta20 = null;
+    try {
+      synthSections20 = _buildSynthesisSections({
+        myCalc: myCalc,
+        ptCalc: ptCalc,
+        myBase: myBase20,
+        ptBase: ptBase20,
+        myMbtiFull: (myInput && myInput.mbti) || (myCalc && myCalc.mbti) || myBase20,
+        ptMbtiFull: (partner && partner.mbti) || (ptCalc && ptCalc.mbti) || ptBase20,
+        myGogyo: myGogyo20,
+        ptGogyo: ptGogyo20,
+        gogyoRel: gogyo_rel20,
+        mbtiCompatLabel: (myBase20 && ptBase20)
+          ? (function(){
+              try { return _getMbtiCompatType(myBase20, ptBase20).label; }
+              catch(e){ return null; }
+            })()
+          : null,
+      });
+      synthMeta20 = _buildSynthesisMeta(synthSections20);
+    } catch (eSect) {
+      console.warn('[compatCalcFull] _buildSynthesisSections error:', eSect);
+      synthSections20 = {};
+      synthMeta20 = null;
+    }
+
+    // ⚠ Synthesis から annualFortune を切り離したため、旧 synthesisText への
+    //    流年要約追記もコメントアウト。将来「独立セクション/タブ」で復活する際は
+    //    ここではなく独立 UI 側で表示する。
+    /*
+    if (synthesisText && synthSections20.annualFortune && synthSections20.annualFortune.body) {
+      synthesisText = synthesisText + '\n\n' + '【これから巡る運勢期】\n' + synthSections20.annualFortune.body;
+    }
+    */
+
     result.gogyoMbtiSynthesis = {
       myGProf: myGProf20,
       ptGProf: ptGProf20,
@@ -1731,7 +2671,13 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
       themBody: themBody20,
       themGapLabel: themGapLabel20,
       themIsHarmony: themIsHarmony20,
+      // 後方互換: 既存の synthesisText (1本の文字列) を維持＋annualFortune 段落を追加
       synthesisText: synthesisText,
+      // Phase 1+2 (4a 適用後): セクション Object 形式 (8セクション: self/partner/fiveElement/twelveStage/topGodPair/kishin/specialStar/conclusion)
+      // ※ annualFortune は将来の独立セクション実装まで切り離し中
+      sections: synthSections20,
+      // Phase 2: トップレベル meta (UI バッジ等のショートカット)
+      meta: synthMeta20,
     };
   } catch (e) {
     console.error('[compatCalcFull] Section 20 error:', e);

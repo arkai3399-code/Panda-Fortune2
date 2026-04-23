@@ -17,6 +17,51 @@ import * as CSK from '../data/compatScriptKr.js';
 // 外部参照互換
 window.MBTI_32_COMPAT = MBTI_32_COMPAT;
 
+// ════════════════════════════════════════════════════════════════
+// Phase 3a ヘルパー: SYNTHESIS 左右カードの 4段落構造化レンダラ
+// ════════════════════════════════════════════════════════════════
+/**
+ * sections.self.body / sections.partner.body の長文を 4段落に分割し、
+ * 小見出し付きHTMLとして整形する。
+ * 期待段落順序: [0]日主 [1]格局 [2]動機 [3]MBTI×命式
+ * 段落区切り: '\n\n' (空行)
+ *
+ * @param {string} bodyText  - sections.self.body または sections.partner.body
+ * @param {string} accentColor - 小見出し色 (例: 'rgba(140,190,240,.75)')
+ * @returns {string} innerHTML として注入する HTML 文字列
+ */
+function _renderPersonalCardBody(bodyText, accentColor) {
+  if (!bodyText || typeof bodyText !== 'string') return '─';
+  var paragraphs = bodyText.split(/\n\s*\n/).map(function(p){ return p.trim(); }).filter(Boolean);
+  var labels = ['日主', '格局', '動機', 'MBTI × 命式'];
+
+  if (paragraphs.length === 0) return '─';
+  if (paragraphs.length !== 4) {
+    // フォールバック: 段落数が想定外 → 小見出しなしで段落のみ表示
+    return paragraphs.map(function(p){
+      return '<p style="margin:0 0 10px 0;font-size:12px;color:rgba(232,228,217,.72);line-height:1.9;font-family:\'Shippori Mincho\',serif;">' + _escapeHtml(p) + '</p>';
+    }).join('');
+  }
+  var html = '';
+  for (var i = 0; i < 4; i++) {
+    var topMargin = i === 0 ? '0' : '12px';
+    html += '<div style="font-size:10px;letter-spacing:.08em;color:' + accentColor + ';margin:' + topMargin + ' 0 4px 0;font-weight:600;">【' + labels[i] + '】</div>';
+    html += '<p style="margin:0;font-size:12px;color:rgba(232,228,217,.82);line-height:1.9;font-family:\'Shippori Mincho\',serif;">' + _escapeHtml(paragraphs[i]) + '</p>';
+  }
+  return html;
+}
+
+/** HTML エスケープ (XSS 対策) */
+function _escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ── ビュー切り替え関数 ──────────────────────────
 // _pfShowCompat / _pfShowMain は Babel 側（上）で定義済み。
 // ここでは _pfRunCompatScript のみ定義する。
@@ -298,11 +343,12 @@ window._pfRunCompatScript = function() {
     var _KO = {木:'土',火:'金',土:'水',金:'木',水:'火'};
     function _jis10(niI, tiI) {
       var ng=_GY[niI], tg=_GY[tiI], s=(niI%2)===(tiI%2);
+      // 修正: 旧コードは 偏官/印 が逆転していた
       if(ng===tg) return s?'比肩':'劫財';
       if(_SE[ng]===tg) return s?'食神':'傷官';
       if(_KO[ng]===tg) return s?'偏財':'正財';
-      if(_SE[tg]===ng) return s?'偏官':'正官';
-      if(_KO[tg]===ng) return s?'偏印':'正印';
+      if(_SE[tg]===ng) return s?'偏印':'正印';
+      if(_KO[tg]===ng) return s?'偏官':'正官';
       return '比肩';
     }
     var myKanI  = _JIKKAN_IDX[myCalc.pillars.day.kan];
@@ -338,35 +384,33 @@ window._pfRunCompatScript = function() {
   var weightLabel = '';
   var _wlIsKr = CSK.getLang() === 'kr';
   var _wlT = _wlIsKr
-    ? { syk:'숙명의 인연', hka:'끌어당기는 힘', love:'연애운', lover:'연인', care:'관심 있는 사람', ex:'전 교제 상대', friend:'친구', work:'직장인', family:'가족', open:'(', close:')' }
-    : { syk:'宿命の縁', hka:'引き合う力', love:'恋愛運', lover:'恋人', care:'気になる人', ex:'元交際相手', friend:'友人', work:'職場の人', family:'家族', open:'（', close:'）' };
-  function _wlMake(parts, suffix) {
-    return parts.join(' + ') + (suffix ? _wlT.open + suffix + _wlT.close : '');
-  }
+    ? { syk:'숙명의 인연', hka:'끌어당기는 힘', love:'연애운', bonus:'연애 보완 가점' }
+    : { syk:'宿命の縁', hka:'引き合う力', love:'恋愛運', bonus:'恋愛補完加点' };
+  // 恋愛系 4 続柄は末尾に「+ 恋愛補完加点」を付与、非恋愛系はシンプルな加重内訳のみ
   if (rel === '恋人・パートナー') {
     wB = 0.25; wH = 0.25; wM = 0.25; wL = 0.25;
-    weightLabel = _wlMake([_wlT.syk+'25%', _wlT.hka+'25%', 'MBTI25%', _wlT.love+'25%'], _wlT.lover);
+    weightLabel = [_wlT.syk+'25%', _wlT.hka+'25%', 'MBTI25%', _wlT.love+'25%', _wlT.bonus].join(' + ');
   } else if (rel === '気になる人') {
     wB = 0.25; wH = 0.35; wM = 0.15; wL = 0.25;
-    weightLabel = _wlMake([_wlT.syk+'25%', _wlT.hka+'35%', 'MBTI15%', _wlT.love+'25%'], _wlT.care);
+    weightLabel = [_wlT.syk+'25%', _wlT.hka+'35%', 'MBTI15%', _wlT.love+'25%', _wlT.bonus].join(' + ');
   } else if (rel === '元交際相手') {
     wB = 0.25; wH = 0.45; wM = 0.05; wL = 0.25;
-    weightLabel = _wlMake([_wlT.syk+'25%', _wlT.hka+'45%', 'MBTI5%', _wlT.love+'25%'], _wlT.ex);
+    weightLabel = [_wlT.syk+'25%', _wlT.hka+'45%', 'MBTI5%', _wlT.love+'25%', _wlT.bonus].join(' + ');
   } else if (rel === '配偶者' || rel === '婚約者') {
     wB = 0.30; wH = 0.20; wM = 0.30; wL = 0.20;
-    weightLabel = _wlMake([_wlT.syk+'30%', _wlT.hka+'20%', 'MBTI30%', _wlT.love+'20%'], _wlIsKr ? (rel==='配偶者'?'배우자':'약혼자') : rel);
+    weightLabel = [_wlT.syk+'30%', _wlT.hka+'20%', 'MBTI30%', _wlT.love+'20%', _wlT.bonus].join(' + ');
   } else if (rel === '友人') {
     wB = 0.35; wH = 0.25; wM = 0.40; wL = 0;
-    weightLabel = _wlMake([_wlT.syk+'35%', _wlT.hka+'25%', 'MBTI40%'], _wlT.friend);
+    weightLabel = [_wlT.syk+'35%', _wlT.hka+'25%', 'MBTI40%'].join(' + ');
   } else if (rel === '職場の人') {
     wB = 0.25; wH = 0.20; wM = 0.55; wL = 0;
-    weightLabel = _wlMake([_wlT.syk+'25%', _wlT.hka+'20%', 'MBTI55%'], _wlT.work);
+    weightLabel = [_wlT.syk+'25%', _wlT.hka+'20%', 'MBTI55%'].join(' + ');
   } else if (rel === '家族') {
     wB = 0.60; wH = 0.25; wM = 0.15; wL = 0;
-    weightLabel = _wlMake([_wlT.syk+'60%', _wlT.hka+'25%', 'MBTI15%'], _wlT.family);
+    weightLabel = [_wlT.syk+'60%', _wlT.hka+'25%', 'MBTI15%'].join(' + ');
   } else {
     wB = 0.30; wH = 0.25; wM = 0.25; wL = 0.20;
-    weightLabel = _wlMake([_wlT.syk+'30%', _wlT.hka+'25%', 'MBTI25%', _wlT.love+'20%'], '');
+    weightLabel = [_wlT.syk+'30%', _wlT.hka+'25%', 'MBTI25%', _wlT.love+'20%', _wlT.bonus].join(' + ');
   }
 
   // ── 4枚目カードの表示切り替え ────────────────────────────────────
@@ -779,6 +823,9 @@ window._pfRunCompatScript = function() {
     if(compat_type==='相剋型') newLove=Math.max(30,newLove-5);
     // 総合点の再計算（4要素加重平均、恋愛運なしの続柄は wL=0）
     var newTotal = Math.round(newBirth_n * wB + hik_n * wH + mbt_n * wM + newLove * wL);
+    // 恋人・配偶者向け加点(4要素: 干合化気補完+12/配偶者星+5/五行補完+4/暗合+3) を後乗せ
+    var _cbBonus1 = (window._pfCompatData && window._pfCompatData.coupleBonus && window._pfCompatData.coupleBonus.bonusPoints) || 0;
+    if (_cbBonus1) newTotal = Math.min(100, newTotal + _cbBonus1);
     var elBig = document.getElementById('pf-score-big');
     if(elBig) elBig.textContent = String(newTotal);
     // score-label も更新
@@ -794,6 +841,53 @@ window._pfRunCompatScript = function() {
       elLabel.parentNode.insertBefore(elWeightNote, elLabel.nextSibling);
     }
     if(elWeightNote) elWeightNote.textContent = (CSK.getLang()==='kr' ? '종합 점수 = ' : '総合スコア = ') + weightLabel;
+
+    // ── 恋愛補完加点セクション(恋愛系 4 続柄のみ) ──
+    (function _renderCoupleBonusSection(){
+      var LOVE_RELS = ['恋人・パートナー','気になる人','元交際相手','配偶者'];
+      var isLove = LOVE_RELS.indexOf(rel) >= 0;
+      var cbData = (window._pfCompatData && window._pfCompatData.coupleBonus) || null;
+      var elBox = document.getElementById('pf-couple-bonus-box');
+
+      // 非恋愛系 or データなし → 既存セクションを非表示/除去して終了
+      if (!isLove || !cbData || !cbData.applied || !cbData.bonusPoints) {
+        if (elBox) elBox.style.display = 'none';
+        return;
+      }
+
+      // 初回生成: weightNote の直後に挿入
+      if (!elBox && elWeightNote && elWeightNote.parentNode) {
+        elBox = document.createElement('div');
+        elBox.id = 'pf-couple-bonus-box';
+        elBox.style.cssText = 'margin:8px auto 16px;max-width:420px;padding:10px 14px;border-radius:10px;background:rgba(255,180,200,.06);border:1px solid rgba(255,180,200,.22);font-family:serif;';
+        elWeightNote.parentNode.insertBefore(elBox, elWeightNote.nextSibling);
+      }
+      if (!elBox) return;
+
+      var isKr = CSK.getLang() === 'kr';
+      var tTitle = isKr ? '【연애 보완 가점】' : '【恋愛補完加点】';
+      var tLabel = {
+        kangoKaki: isKr ? '간합화기 보완' : '干合化気補完',
+        haiguusha: isKr ? '배우자 별 상호 성립' : '配偶者星相互成立',
+        gogyoFukkan: isKr ? '오행 보완' : '五行補完',
+        angou: isKr ? '일지 암합' : '日支暗合',
+      };
+      var details = cbData.details || {};
+      var items = [];
+      ['kangoKaki','haiguusha','gogyoFukkan','angou'].forEach(function(k){
+        var r = details[k];
+        if (r && r.matched && r.points > 0) {
+          items.push('<div style="font-size:11px;color:rgba(255,255,255,.75);padding:2px 0;">✨ ' + tLabel[k] + ' <span style="color:#ffd38c;font-weight:600;">(+' + r.points + ')</span></div>');
+        }
+      });
+
+      elBox.style.display = 'block';
+      elBox.innerHTML =
+        '<div style="text-align:center;font-size:12px;letter-spacing:.06em;color:#ffc8a8;margin-bottom:6px;">'
+        + tTitle + ' <span style="color:#ffd38c;font-weight:700;">+' + cbData.bonusPoints + (isKr ? '점' : '点') + '</span>'
+        + '</div>'
+        + items.join('');
+    })();
     // pf-score-summary（まとめ文）も newTotal で更新
     var elSummaryNew = document.getElementById('pf-score-summary');
     if(elSummaryNew) elSummaryNew.textContent = _ptNameShort + 'との相性：' + newLabel;
@@ -874,6 +968,9 @@ window._pfRunCompatScript = function() {
 
   var loveWeighted  = loveScore || 60;
   var totalWeighted = Math.round(bcs_n * wB + hik_n * wH + mbt_n * wM + loveWeighted * wL);
+  // 恋人・配偶者向け加点を後乗せ(calcCompatDetail 側で算出済み)
+  var _cbBonus2 = (window._pfCompatData && window._pfCompatData.coupleBonus && window._pfCompatData.coupleBonus.bonusPoints) || 0;
+  if (_cbBonus2) totalWeighted = Math.min(100, totalWeighted + _cbBonus2);
 
   // 星の数
   // P1-B: 星評価削除済み
@@ -1348,8 +1445,8 @@ window._pfRunCompatScript = function() {
     var ptProfileText = _profilesByLang[ptProfileKey] || _profilesByLang[ptNikchu + '_普通格局']
       || NIKCHU_PROFILES[ptProfileKey] || NIKCHU_PROFILES[ptNikchu + '_普通格局'] || ptPersona.descThem;
     if(elPtDesc) {
-      // 相手の元命テキスト（月柱蔵干本気 × 日干）を日柱プロフィールの後に1段落で繋げる
-      var ptGenmeiKey = getGenmei(ptCalc.pillars.day.kan, ptCalc.pillars.month.shi);
+      // 相手の元命テキスト（月柱蔵干 × 日干）— 節入り経過日数で 余気/中気/本気 を選定
+      var ptGenmeiKey = getGenmei(ptCalc.pillars.day.kan, ptCalc.pillars.month.shi, ptCalc.pillars.month.daysFromSetsu);
       var _genmeiTextsForCompat = getGenmeiTextsByLang(_compatLang);
       var ptGenmeiData = ptGenmeiKey ? _genmeiTextsForCompat[ptGenmeiKey] : null;
       if (ptGenmeiData) {
@@ -2635,47 +2732,104 @@ window._pfRunCompatScript = function() {
     var gogyo_rel = compat_type || '中和型';
     var relDesc = GOGYO_REL_DESC[gogyo_rel] || 'バランスを保つ';
 
-    // ── AXIS 01: 命式 × MBTI 気質の一致・ギャップ ───────────────────
+    // ── AXIS 01: 命式 × MBTI (Phase 3a: sections 参照版) ──────────────
+    // データソース: window._pfCompatData.gogyoMbtiSynthesis.sections / .meta
+    //   - 本文 4段落 (日主/格局/動機/MBTI×命式) を _renderPersonalCardBody でHTML化
+    //   - バッジは meta.selfAlignment / meta.partnerAlignment 優先
+    //   - sections が無い場合は旧ロジックにフォールバック
+    var _synthData = (window._pfCompatData && window._pfCompatData.gogyoMbtiSynthesis) || null;
+    var _synthSections = _synthData && _synthData.sections;
+    var _synthMeta = _synthData && _synthData.meta;
+    var _badgeStyle_match = 'display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;margin-bottom:8px;background:rgba(100,200,100,.12);border:1px solid rgba(100,200,100,.3);color:rgba(120,210,110,.9);';
+    var _badgeStyle_gap   = 'display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;margin-bottom:8px;background:rgba(220,160,60,.1);border:1px solid rgba(220,160,60,.25);color:rgba(230,170,80,.9);';
+
+    // ── 左カード（あなた） ─────────────────────────
     var elYouTitle = document.getElementById('pf-gogyo-you-title');
     var elYouBody  = document.getElementById('pf-gogyo-you-body');
     var elYouGap   = document.getElementById('pf-gogyo-you-gap');
     if(myGProf && myBase && elYouTitle && elYouBody){
-      var myIsHarmony = myGProf.affinity_mbti.indexOf(myBase)>=0;
+      // タイトル: 現行維持
       elYouTitle.textContent = myGogyo+'（'+myGProf.core+'） × '+myBase;
+
+      // バッジ判定: meta.selfAlignment 優先、無ければ従来ロジック
+      var myIsHarmony;
+      if (_synthMeta && _synthMeta.selfAlignment) {
+        myIsHarmony = _synthMeta.selfAlignment === 'match';
+      } else {
+        myIsHarmony = myGProf.affinity_mbti.indexOf(myBase)>=0;
+      }
       if(elYouGap){
         elYouGap.textContent = myIsHarmony ? '✓ 一致型' : '⚡ ギャップ型';
-        elYouGap.style.cssText = myIsHarmony
-          ? 'background:rgba(100,200,100,.12);border:1px solid rgba(100,200,100,.3);color:rgba(120,210,110,.9);'
-          : 'background:rgba(220,160,60,.1);border:1px solid rgba(220,160,60,.25);color:rgba(230,170,80,.9);';
+        elYouGap.style.cssText = myIsHarmony ? _badgeStyle_match : _badgeStyle_gap;
       }
-      var youBody = 'あなたの命式は「'+myGogyo+'」の気質——'+myGProf.drive+'タイプンダ。';
-      if(myIsHarmony){
-        youBody += 'MBTIの'+myBase+'はこの気質と自然に一致している。命式とMBTIが同じ方向を向いている「一致型」だから、行動パターンと内面の動機が一貫していて、「自分らしく生きている」という感覚が強くなりやすいんダよ。';
+
+      // 本文: sections.self.body から 4段落HTMLで注入（無ければ旧文言）
+      if (_synthSections && _synthSections.self && _synthSections.self.body) {
+        elYouBody.innerHTML = _renderPersonalCardBody(
+          _synthSections.self.body,
+          'rgba(140,190,240,.75)' // 水色系アクセント
+        );
       } else {
-        youBody += 'MBTIの'+myBase+'は命式の気質と異なる方向を向いている「ギャップ型」ンダ。これはあなたの内側（命式の本質）と外側（MBTIの行動スタイル）が違うことを意味していて、自分でも「なぜこう動いてしまうのか」と感じる場面があるかもしれない。だがこのギャップがあなたの複雑な魅力と深みを作っているんダよ。';
+        var youBody = 'あなたの命式は「'+myGogyo+'」の気質——'+myGProf.drive+'タイプンダ。';
+        if(myIsHarmony){
+          youBody += 'MBTIの'+myBase+'はこの気質と自然に一致している。命式とMBTIが同じ方向を向いている「一致型」だから、行動パターンと内面の動機が一貫していて、「自分らしく生きている」という感覚が強くなりやすいんダよ。';
+        } else {
+          youBody += 'MBTIの'+myBase+'は命式の気質と異なる方向を向いている「ギャップ型」ンダ。これはあなたの内側（命式の本質）と外側（MBTIの行動スタイル）が違うことを意味していて、自分でも「なぜこう動いてしまうのか」と感じる場面があるかもしれない。だがこのギャップがあなたの複雑な魅力と深みを作っているんダよ。';
+        }
+        elYouBody.textContent = youBody;
       }
-      elYouBody.textContent = youBody;
     }
 
+    // ── 右カード（相手） ─────────────────────────
     var elThemTitle = document.getElementById('pf-gogyo-them-title');
     var elThemBody  = document.getElementById('pf-gogyo-them-body');
     var elThemGap   = document.getElementById('pf-gogyo-them-gap');
     if(ptGProf && ptBase && elThemTitle && elThemBody){
-      var ptIsHarmony = ptGProf.affinity_mbti.indexOf(ptBase)>=0;
       elThemTitle.textContent = ptGogyo+'（'+ptGProf.core+'） × '+ptBase;
+
+      var ptIsHarmony;
+      if (_synthMeta && _synthMeta.partnerAlignment) {
+        ptIsHarmony = _synthMeta.partnerAlignment === 'match';
+      } else {
+        ptIsHarmony = ptGProf.affinity_mbti.indexOf(ptBase)>=0;
+      }
       if(elThemGap){
         elThemGap.textContent = ptIsHarmony ? '✓ 一致型' : '⚡ ギャップ型';
-        elThemGap.style.cssText = ptIsHarmony
-          ? 'background:rgba(100,200,100,.12);border:1px solid rgba(100,200,100,.3);color:rgba(120,210,110,.9);'
-          : 'background:rgba(220,160,60,.1);border:1px solid rgba(220,160,60,.25);color:rgba(230,170,80,.9);';
+        elThemGap.style.cssText = ptIsHarmony ? _badgeStyle_match : _badgeStyle_gap;
       }
-      var themBody = '相手の命式は「'+ptGogyo+'」の気質——'+ptGProf.drive+'タイプんダ。';
-      if(ptIsHarmony){
-        themBody += 'MBTIの'+ptBase+'もその気質と一致している「一致型」だから、相手は言ってることとやってることが非常に整合している人ンダよ。相手の本質を理解するとき、命式とMBTIのどちらで見ても同じ結論に行き着くはずンダ。';
+
+      if (_synthSections && _synthSections.partner && _synthSections.partner.body) {
+        elThemBody.innerHTML = _renderPersonalCardBody(
+          _synthSections.partner.body,
+          'rgba(224,96,122,.75)' // ピンク系アクセント
+        );
       } else {
-        themBody += 'MBTIの'+ptBase+'は命式の気質とズレている「ギャップ型」だから、「外から見える相手の印象」と「相手の内側の本音」が違う場面があるんダよ。相手が時々矛盾して見えるとしたら、この2つのギャップが理由かもしれないんダ。';
+        var themBody = '相手の命式は「'+ptGogyo+'」の気質——'+ptGProf.drive+'タイプんダ。';
+        if(ptIsHarmony){
+          themBody += 'MBTIの'+ptBase+'もその気質と一致している「一致型」だから、相手は言ってることとやってることが非常に整合している人ンダよ。相手の本質を理解するとき、命式とMBTIのどちらで見ても同じ結論に行き着くはずンダ。';
+        } else {
+          themBody += 'MBTIの'+ptBase+'は命式の気質とズレている「ギャップ型」だから、「外から見える相手の印象」と「相手の内側の本音」が違う場面があるんダよ。相手が時々矛盾して見えるとしたら、この2つのギャップが理由かもしれないんダ。';
+        }
+        elThemBody.textContent = themBody;
       }
-      elThemBody.textContent = themBody;
+    }
+
+    // ══ Phase 3b: 新 6 セクション (fiveElement/twelveStage/topGodPair/kishin/specialStar/conclusion) ══
+    //   sections.{key}.body を対応する #pf-syn-{key}-body に textContent で流し込み。
+    //   CSS の white-space:pre-wrap (.pf-syn-body) で \n\n が段落区切りとして自然表示される。
+    //   sections が取得不能な極端ケースには '─' フォールバック。
+    //   旧 200行ロジック (pf-mbti-gogyo-comment) は display:none で温存中、ステップ4d で削除予定。
+    try {
+      var SYN_SECTION_IDS = ['fiveElement', 'twelveStage', 'topGodPair', 'kishin', 'specialStar', 'conclusion'];
+      for (var _i = 0; _i < SYN_SECTION_IDS.length; _i++) {
+        var _key = SYN_SECTION_IDS[_i];
+        var _el = document.getElementById('pf-syn-' + _key + '-body');
+        if (!_el) continue;
+        var _sec = _synthSections && _synthSections[_key];
+        _el.textContent = (_sec && _sec.body) ? _sec.body : '─';
+      }
+    } catch (eSyn) {
+      console.warn('[compatScript] 新 6 セクション流し込みエラー:', eSyn);
     }
 
     // ── 統合鑑定文（MBTI両者入力時のみ） ───────────────────────────
@@ -2686,25 +2840,9 @@ window._pfRunCompatScript = function() {
     } else {
       if(synthComment) synthComment.style.display = 'block';
       try {
-        // 通変星計算
-        var _calcTsuhen = function(calc) {
-          if (!calc) return null;
-          var p = calc.pillars; if(!p) return null;
-          var cnt={};
-          var KK=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
-          var GG=['木','木','火','火','土','土','金','金','水','水'];
-          var ZK={子:['壬','癸'],丑:['己','癸','辛'],寅:['甲','丙','戊'],卯:['乙'],辰:['戊','乙','癸'],巳:['丙','庚','戊'],午:['丁','己'],未:['己','丁','乙'],申:['庚','壬','戊'],酉:['辛'],戌:['戊','辛','丁'],亥:['壬','甲']};
-          var S2={木:'火',火:'土',土:'金',金:'水',水:'木'};
-          var K2={木:'土',火:'金',土:'水',金:'木',水:'火'};
-          var dK=p.day.kan;
-          function ts(n,t){var ni=KK.indexOf(n),ti=KK.indexOf(t);if(ni<0||ti<0)return null;var ng=GG[ni],tg=GG[ti],s=(ni%2)===(ti%2);if(ng===tg)return s?'比肩':'劫財';if(S2[ng]===tg)return s?'食神':'傷官';if(K2[ng]===tg)return s?'偏財':'正財';if(S2[tg]===ng)return s?'偏官':'正官';if(K2[tg]===ng)return s?'偏印':'正印';return'比肩';}
-          ['year','month','hour'].forEach(function(k){if(p[k]){var t=ts(dK,p[k].kan);if(t)cnt[t]=(cnt[t]||0)+1;}});
-          Object.values(p).forEach(function(pp){if(!pp)return;(ZK[pp.shi]||[]).forEach(function(z){var t=ts(dK,z);if(t)cnt[t]=(cnt[t]||0)+0.5;});});
-          var s=Object.entries(cnt).sort(function(a,b){return b[1]-a[1];});
-          return s.length?s[0][0]:null;
-        };
-        var myTsuhen = _calcTsuhen(myCalc);
-        var ptTsuhen = _calcTsuhen(ptCalc);
+        // 最強通変星 はエンジン (calcMeishiki) が calc.topGod として算出済み (SSOT)
+        var myTsuhen = (myCalc && myCalc.topGod) || null;
+        var ptTsuhen = (ptCalc && ptCalc.topGod) || null;
         var myKishin = myCalc ? (myCalc.kishin||[]) : [];
         var ptKishin = ptCalc ? (ptCalc.kishin||[]) : [];
         var sharedKishin = myKishin.filter(function(g){return ptKishin.indexOf(g)>=0;});

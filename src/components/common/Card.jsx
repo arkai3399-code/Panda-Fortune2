@@ -5,7 +5,7 @@ import { C } from '../../data/theme.js';
 // 元HTML 2266-2285行。
 export default function Card({ children, style = {}, glow = false }) {
   return (
-    <div style={{
+    <div className={'pf-card' + (glow ? ' pf-card-glow' : '')} style={{
       background: `linear-gradient(160deg, ${C.card} 0%, #150909 100%)`,
       border: `1px solid ${C.border}`,
       borderRadius: 16,

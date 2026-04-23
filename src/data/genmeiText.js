@@ -100,39 +100,147 @@ export function getGenmeiTextsByLang(lang) {
   return lang === 'kr' ? GENMEI_TEXTS_KR : GENMEI_TEXTS;
 }
 
-// ── 月柱蔵干本気 × 日干 から通変星(元命)を算出 ─────────
+// ── 月柱蔵干 × 日干 から通変星(元命)を算出 ─────────
 const _KAN = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
 const _KG  = ['木','木','火','火','土','土','金','金','水','水'];
-const _ZOKAN = {
-  子:['壬','癸'], 丑:['己','癸','辛'], 寅:['甲','丙','戊'], 卯:['乙'],
-  辰:['戊','乙','癸'], 巳:['丙','庚','戊'], 午:['丁','己'], 未:['己','丁','乙'],
-  申:['庚','壬','戊'], 酉:['辛'], 戌:['戊','辛','丁'], 亥:['壬','甲'],
-};
 const _SEI  = {木:'火',火:'土',土:'金',金:'水',水:'木'};
 const _KOKU = {木:'土',火:'金',土:'水',金:'木',水:'火'};
+
+// ── 蔵干分野表（節入りからの経過日数で余気/中気/本気を選定）──
+//
+// 星平會海全書に基づく一般的な配分。各月支について
+//   - 0..yokiDays                          → 余気
+//   - yokiDays..(yokiDays+chukiDays)       → 中気
+//   - それ以降                              → 本気
+// と日数で割り当てる。子・卯・酉は中気を持たないため chukiDays:0 とし
+// chuki フィールドを honki と同じ干に揃える。
+//
+// 仕様（ユーザー指定）:
+//   子: 壬(0-10),  癸(10-)
+//   丑: 癸(0-9),   辛(9-12),  己(12-)
+//   寅: 戊(0-7),   丙(7-14),  甲(14-)
+//   卯: 甲(0-10),  乙(10-)
+//   辰: 乙(0-9),   癸(9-12),  戊(12-)
+//   巳: 戊(0-7),   庚(7-14),  丙(14-)
+//   午: 丙(0-10),  己(10-20), 丁(20-)
+//   未: 丁(0-9),   乙(9-12),  己(12-)
+//   申: 戊(0-7),   壬(7-14),  庚(14-)
+//   酉: 庚(0-10),  辛(10-)
+//   戌: 辛(0-9),   丁(9-18),  戊(18-)
+//   亥: 戊(0-7),   甲(7-14),  壬(14-)
+const _ZOKAN_ALLOCATION = {
+  子: { yokiDays: 10, chukiDays: 0,  yoki: '壬', chuki: '癸', honki: '癸' },
+  丑: { yokiDays: 9,  chukiDays: 3,  yoki: '癸', chuki: '辛', honki: '己' },
+  寅: { yokiDays: 7,  chukiDays: 7,  yoki: '戊', chuki: '丙', honki: '甲' },
+  卯: { yokiDays: 10, chukiDays: 0,  yoki: '甲', chuki: '乙', honki: '乙' },
+  辰: { yokiDays: 9,  chukiDays: 3,  yoki: '乙', chuki: '癸', honki: '戊' },
+  巳: { yokiDays: 7,  chukiDays: 7,  yoki: '戊', chuki: '庚', honki: '丙' },
+  午: { yokiDays: 10, chukiDays: 10, yoki: '丙', chuki: '己', honki: '丁' },
+  未: { yokiDays: 9,  chukiDays: 3,  yoki: '丁', chuki: '乙', honki: '己' },
+  申: { yokiDays: 7,  chukiDays: 7,  yoki: '戊', chuki: '壬', honki: '庚' },
+  酉: { yokiDays: 10, chukiDays: 0,  yoki: '庚', chuki: '辛', honki: '辛' },
+  戌: { yokiDays: 9,  chukiDays: 9,  yoki: '辛', chuki: '丁', honki: '戊' },
+  亥: { yokiDays: 7,  chukiDays: 7,  yoki: '戊', chuki: '甲', honki: '壬' },
+};
+
+// 後方互換: 旧 _ZOKAN（本気のみ要素）を残す
+const _ZOKAN_HONKI = {
+  子:'癸', 丑:'己', 寅:'甲', 卯:'乙', 辰:'戊', 巳:'丙',
+  午:'丁', 未:'己', 申:'庚', 酉:'辛', 戌:'戊', 亥:'壬',
+};
 
 function _tsuhenStar(dayKan, targetKan) {
   const ni = _KAN.indexOf(dayKan), ti = _KAN.indexOf(targetKan);
   if (ni < 0 || ti < 0) return null;
   const ng = _KG[ni], tg = _KG[ti];
   const sameYinYang = (ni % 2) === (ti % 2);
+  // 通変星：ng=日干五行, tg=対象天干五行
+  //   _SEI[X] = X が生む五行（X→相生先）   _KOKU[X] = X が剋す五行（X→相剋先）
+  //   _SEI[ng]===tg : 我生（私→対象）→ 食神/傷官
+  //   _KOKU[ng]===tg: 我克（私→対象）→ 偏財/正財
+  //   _SEI[tg]===ng : 生我（対象→私）→ 印綬/偏印
+  //   _KOKU[tg]===ng: 克我（対象→私）→ 偏官/正官
   if (ng === tg)           return sameYinYang ? '比肩' : '劫財';
   if (_SEI[ng] === tg)     return sameYinYang ? '食神' : '傷官';
   if (_KOKU[ng] === tg)    return sameYinYang ? '偏財' : '正財';
-  if (_SEI[tg] === ng)     return sameYinYang ? '偏官' : '正官';
-  if (_KOKU[tg] === ng)    return sameYinYang ? '偏印' : '印綬';
+  if (_SEI[tg] === ng)     return sameYinYang ? '偏印' : '印綬';
+  if (_KOKU[tg] === ng)    return sameYinYang ? '偏官' : '正官';
   return null;
 }
 
 /**
- * 元命 = 月柱蔵干(本気) × 日干 → 通変星名
- * @param {string} dayKan   日柱の天干（例: '壬'）
- * @param {string} monthShi 月柱の地支（例: '戌'）
- * @returns {string|null}   通変星名（'比肩'〜'印綬'）。不明時は null
+ * 節入り経過日数から月支の蔵干（本気/中気/余気）を選定する。
+ * @param {string} monthShi
+ * @param {number} daysFromSetsu  節入りからの経過日数（少数可）
+ * @returns {string|null} 蔵干の天干1文字
  */
-export function getGenmei(dayKan, monthShi) {
-  const zk = _ZOKAN[monthShi];
-  if (!zk || zk.length === 0) return null;
-  const honki = zk[0]; // 蔵干の先頭 = 本気
-  return _tsuhenStar(dayKan, honki);
+export function getMonthZokan(monthShi, daysFromSetsu) {
+  const a = _ZOKAN_ALLOCATION[monthShi];
+  if (!a) return null;
+  if (typeof daysFromSetsu !== 'number' || isNaN(daysFromSetsu) || daysFromSetsu < 0) {
+    return a.honki;
+  }
+  if (daysFromSetsu < a.yokiDays) return a.yoki;
+  if (daysFromSetsu < a.yokiDays + a.chukiDays) return a.chuki;
+  return a.honki;
 }
+
+/**
+ * 元命 = 月柱蔵干 × 日干 → 通変星名
+ * 節入りからの経過日数 (daysFromSetsu) を渡すと、伝統的な蔵干分野表に
+ * 従って 余気/中気/本気 を選定する。未指定時は本気を使う（後方互換）。
+ *
+ * @param {string} dayKan         日柱の天干（例: '壬'）
+ * @param {string} monthShi       月柱の地支（例: '戌'）
+ * @param {number} [daysFromSetsu] 節入りからの経過日数（省略時は本気）
+ * @returns {string|null}         通変星名（'比肩'〜'印綬'）。不明時は null
+ */
+export function getGenmei(dayKan, monthShi, daysFromSetsu) {
+  const targetKan = (typeof daysFromSetsu === 'number')
+    ? getMonthZokan(monthShi, daysFromSetsu)
+    : (_ZOKAN_HONKI[monthShi] || null);
+  if (!targetKan) return null;
+  return _tsuhenStar(dayKan, targetKan);
+}
+
+// ─── 蔵干関連の共有ヘルパー ────────────────────────────────────
+/**
+ * 地支の蔵干一覧を本気→中気→余気の順で重複除去して返す（画面表示用）。
+ * 子卯酉のように中気が本気と同じ場合は省略される。
+ * @param {string} shi 地支（例: '戌'）
+ * @returns {string[]} 蔵干の天干配列（例: 戌→['戊','丁','辛']）
+ */
+export function getZokanList(shi) {
+  const a = _ZOKAN_ALLOCATION[shi];
+  if (!a) return [];
+  const seen = new Set();
+  const out = [];
+  for (const k of [a.honki, a.chuki, a.yoki]) {
+    if (k && !seen.has(k)) { seen.add(k); out.push(k); }
+  }
+  return out;
+}
+
+/**
+ * 五行バランス計算用：地支の蔵干を {kan, weight} 配列で返す。
+ *   本気: 0.5、中気: 0.3、余気: 0.2 で加重。
+ * 中気を持たない月支（子卯酉）は本気+余気のみ（合計0.7）。
+ * @param {string} shi
+ * @returns {{kan:string, weight:number}[]}
+ */
+export function getZokanWeighted(shi) {
+  const a = _ZOKAN_ALLOCATION[shi];
+  if (!a) return [];
+  const out = [];
+  if (a.honki) out.push({ kan: a.honki, weight: 0.5 });
+  if (a.chukiDays > 0 && a.chuki && a.chuki !== a.honki) {
+    out.push({ kan: a.chuki, weight: 0.3 });
+  }
+  if (a.yoki && a.yoki !== a.honki && a.yoki !== a.chuki) {
+    out.push({ kan: a.yoki, weight: 0.2 });
+  }
+  return out;
+}
+
+// 内部公開（他モジュールから生データを参照したい場合に）
+export const ZOKAN_ALLOCATION = _ZOKAN_ALLOCATION;

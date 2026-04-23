@@ -8,7 +8,7 @@ export default function PopoSpeech({ text, delay = 0 }) {
   // 絵文字 🐼 をインライン画像に置換
   const html = (text || '').replace(/🐼/g, PANDA_IMG_HTML);
   return (
-    <div style={{
+    <div className="pf-popo" style={{
       display: 'flex', gap: 14, alignItems: 'flex-start',
       background: 'rgba(201,168,76,0.04)',
       border: '1px solid rgba(201,168,76,0.12)',
@@ -17,6 +17,7 @@ export default function PopoSpeech({ text, delay = 0 }) {
     }}>
       <PandaIcon size={32} />
       <p
+        className="pf-popo-text"
         style={{
           fontFamily: "'Shippori Mincho', serif",
           fontSize: 15, lineHeight: 1.9, color: C.textSub, fontWeight: 400,

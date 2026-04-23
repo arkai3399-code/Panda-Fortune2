@@ -54,6 +54,48 @@ body { background: var(--bg); font-family: 'Noto Sans JP', sans-serif; color: va
 .sec-en { font-size: 9px; letter-spacing: .28em; color: var(--gold-dim); }
 .sec-ja { font-family: 'Shippori Mincho', serif; font-size: 18px; font-weight: 700; }
 
+/* ==========================================================
+   Phase 3b: SYNTHESIS 内の小セクション(6 セクション)用スタイル
+   ========================================================== */
+.pf-syn-section {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.pf-syn-subhead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.pf-syn-en {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: rgba(201, 168, 76, 0.6);
+  font-weight: 500;
+}
+.pf-syn-ja {
+  font-family: 'Shippori Mincho', serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(232, 228, 217, 0.88);
+}
+.pf-syn-body {
+  font-size: 13px;
+  line-height: 1.95;
+  color: rgba(232, 228, 217, 0.78);
+  font-family: 'Shippori Mincho', serif;
+  white-space: pre-wrap; /* sections.body の \n\n を段落分けとして反映 */
+}
+@media (max-width: 600px) {
+  .pf-syn-section { padding: 12px 14px; }
+  .pf-syn-ja { font-size: 12px; }
+  .pf-syn-body { font-size: 12px; line-height: 1.85; }
+}
+
 .popo { display: flex; gap: 12px; align-items: flex-start; background: rgba(201,168,76,.04); border: 1px solid rgba(201,168,76,.12); border-radius: 12px; padding: 14px 16px; }
 .popo-ic { font-size: 22px; flex-shrink: 0; line-height: 1; }
 .popo-tx { font-family: 'Shippori Mincho', serif; font-size: 14px; line-height: 1.9; color: rgba(232,228,217,.8); }

@@ -10,18 +10,14 @@
 // ══════════════════════════════════════════════════════════════
 
 // ── 基礎テーブル ────────────────────────────────────────────
+import { getZokanList, getZokanWeighted } from '../data/genmeiText.js';
+
 const _JIKKAN         = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
 const _JUNISHI        = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
 const _JIKKAN_GOGYO   = ['木','木','火','火','土','土','金','金','水','水'];
 const _JUNISHI_GOGYO  = ['水','土','木','木','土','火','火','土','金','金','土','水'];
 const _SEI  = {木:'火',火:'土',土:'金',金:'水',水:'木'};
 const _KOKU = {木:'土',火:'金',土:'水',金:'木',水:'火'};
-
-const _ZOKAN = {
-  子:['壬','癸'],丑:['己','癸','辛'],寅:['甲','丙','戊'],卯:['乙'],
-  辰:['戊','乙','癸'],巳:['丙','庚','戊'],午:['丁','己'],未:['己','丁','乙'],
-  申:['庚','壬','戊'],酉:['辛'],戌:['戊','辛','丁'],亥:['壬','甲'],
-};
 
 // 十二運星テーブル [日干][地支index]
 const _JUNIU_TBL = {
@@ -137,7 +133,11 @@ function _calcMonthPillar(y,m,d,hUTC,yKan){
   const shiIdx=(step+2)%12;                      // JUNISHI index (2=寅, 3=卯...)
   const monthKans=_GOKORTON[yKan];
   const kanIdx=_JIKKAN.indexOf(monthKans[step]); // GOKORTONはstepで引く
-  return{kan:_JIKKAN[kanIdx],shi:_JUNISHI[shiIdx],kanIdx,shiIdx};
+  // 節入り経過日数（蔵干分野表での元命選定用）
+  const startLon=(315+step*30)%360;
+  const deltaLon=(((sl-startLon)%360)+360)%360;
+  const daysFromSetsu=deltaLon/(360/365.2422);
+  return{kan:_JIKKAN[kanIdx],shi:_JUNISHI[shiIdx],kanIdx,shiIdx,daysFromSetsu};
 }
 
 // 時柱
@@ -151,11 +151,16 @@ function _calcHourPillar(hourInput,dayKan){
 // ── 十神・十二運星 ───────────────────────────────────────────
 function _getJisshin(niIdx,tiIdx){
   const ng=_JIKKAN_GOGYO[niIdx],tg=_JIKKAN_GOGYO[tiIdx],s=(niIdx%2)===(tiIdx%2);
+  // _SEI[X]=Xが生む先, _KOKU[X]=Xが剋す先
+  //   _SEI[ng]===tg → 我生 → 食神/傷官
+  //   _KOKU[ng]===tg→ 我克 → 偏財/正財
+  //   _SEI[tg]===ng → 生我（対象→私）→ 偏印/正印
+  //   _KOKU[tg]===ng→ 克我（対象→私）→ 偏官/正官
   if(ng===tg)return s?'比肩':'劫財';
   if(_SEI[ng]===tg)return s?'食神':'傷官';
   if(_KOKU[ng]===tg)return s?'偏財':'正財';
-  if(_SEI[tg]===ng)return s?'偏官':'正官';
-  if(_KOKU[tg]===ng)return s?'偏印':'正印';
+  if(_SEI[tg]===ng)return s?'偏印':'正印';
+  if(_KOKU[tg]===ng)return s?'偏官':'正官';
   return'比肩';
 }
 function _getJuniunsei(nKan,shiIdx){return(_JUNIU_TBL[nKan]&&_JUNIU_TBL[nKan][shiIdx])||'不明';}
@@ -163,14 +168,16 @@ window._getJuniunsei = _getJuniunsei;
 
 // ── 五行バランス ─────────────────────────────────────────────
 function _calcGokyo(pillarsArr){
+  // 蔵干分野表 (genmeiText.js) を唯一のソースに統一: 本気0.5/中気0.3/余気0.2
   const sc={木:0,火:0,土:0,金:0,水:0};
   for(const p of pillarsArr){
     sc[_JIKKAN_GOGYO[p.kanIdx]]+=1;
     sc[_JUNISHI_GOGYO[p.shiIdx]]+=1;
-    const zk=_ZOKAN[_JUNISHI[p.shiIdx]]||[];
-    if(zk[0])sc[_JIKKAN_GOGYO[_JIKKAN.indexOf(zk[0])]]+=0.5;
-    if(zk[1])sc[_JIKKAN_GOGYO[_JIKKAN.indexOf(zk[1])]]+=0.3;
-    if(zk[2])sc[_JIKKAN_GOGYO[_JIKKAN.indexOf(zk[2])]]+=0.2;
+    const wz=getZokanWeighted(_JUNISHI[p.shiIdx]);
+    for(const z of wz){
+      const idx=_JIKKAN.indexOf(z.kan);
+      if(idx>=0) sc[_JIKKAN_GOGYO[idx]]+=z.weight;
+    }
   }
   return{木:Math.round(sc['木']*10)/10,火:Math.round(sc['火']*10)/10,土:Math.round(sc['土']*10)/10,金:Math.round(sc['金']*10)/10,水:Math.round(sc['水']*10)/10};
 }
@@ -253,7 +260,7 @@ window._calcMeishiki = function(input){
     ...p,
     jisshin:   i===2?'─（日主）':_getJisshin(dP.kanIdx,p.kanIdx),
     juniunsei: _getJuniunsei(dP.kan,p.shiIdx),
-    zokan:     _ZOKAN[_JUNISHI[p.shiIdx]]||[],
+    zokan:     getZokanList(_JUNISHI[p.shiIdx]),
     gogyoKan:  _JIKKAN_GOGYO[p.kanIdx],
     gogyoShi:  _JUNISHI_GOGYO[p.shiIdx],
   }));
@@ -265,6 +272,40 @@ window._calcMeishiki = function(input){
   const daiunList=_calcDaiunList(mP.kanIdx,mP.shiIdx,yP.kan,gender);
   const currentAge=new Date().getFullYear()-year;
   const currentDaiun=daiunList.find(d=>currentAge>=d.ageFrom&&currentAge<=d.ageTo)||daiunList[0];
+
+  // ── 最強通変星 (topGod) + 蔵干分野表加重で集計 ──
+  const _topRes=(function(){
+    const cnt={};
+    for(const p of arr){
+      if(p!==dP){
+        const t=_getJisshin(dP.kanIdx,p.kanIdx);
+        if(t)cnt[t]=(cnt[t]||0)+1;
+      }
+      const wz=getZokanWeighted(_JUNISHI[p.shiIdx]);
+      for(const z of wz){
+        const ti=_JIKKAN.indexOf(z.kan);
+        if(ti<0)continue;
+        const t=_getJisshin(dP.kanIdx,ti);
+        if(t)cnt[t]=(cnt[t]||0)+z.weight;
+      }
+    }
+    const sorted=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
+    const rounded={};
+    for(const [k,v] of Object.entries(cnt))rounded[k]=Math.round(v*10)/10;
+    return{topGod:sorted.length?sorted[0][0]:null,jisshinCount:rounded};
+  })();
+
+  // ── 空亡期 (今後 10 年) ──
+  const _voidYrs=(function(){
+    if(!Array.isArray(kuubouArr)||kuubouArr.length===0)return[];
+    const cy=new Date().getFullYear();
+    const out=[];
+    for(let y=cy;y<=cy+10;y++){
+      const shi=_JUNISHI[((y-4)%12+12)%12];
+      if(kuubouArr.indexOf(shi)>=0)out.push(y);
+    }
+    return out;
+  })();
 
   return{
     input:{year,month,day,hourInput,gender,longitude:lon,mbti,
@@ -278,6 +319,8 @@ window._calcMeishiki = function(input){
     gokyo,kakukyoku:{name:kkName},kishin,kijin,kanshin:[],
     daiunList,currentDaiun,tokuseiboshi,mbti,
     kuubou:kuubouArr,kuubouType,
+    topGod:_topRes.topGod,jisshinCount:_topRes.jisshinCount,
+    voidYearsUpcoming:_voidYrs,
   };
 };
 

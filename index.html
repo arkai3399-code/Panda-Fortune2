@@ -430,10 +430,67 @@
       </div>
     </div>
 
-    <!-- 統合鑑定文（MBTI両者入力時のみ表示） -->
-    <div id="pf-synthesis-comment" style="padding:20px 22px;border-radius:14px;background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.22);">
-      <div style="font-size:9px;letter-spacing:.2em;color:rgba(201,168,76,.6);margin-bottom:10px;">✦ 2つの占いが重なって見えてくること</div>
-      <div id="pf-mbti-gogyo-comment" style="font-size:14px;color:rgba(232,228,217,.88);line-height:2.1;font-family:'Shippori Mincho',serif;">─</div>
+    <!-- Phase 3b: 5 セクション表示(fiveElement / twelveStage / topGodPair / kishin / specialStar)
+         conclusion は下段の pf-synthesis-comment(gold 強調枠)を流用 -->
+    <div id="pf-syn-sections" style="display:flex;flex-direction:column;gap:22px;margin-top:28px;">
+
+      <!-- ① fiveElement -->
+      <div class="pf-syn-section" id="pf-syn-fiveElement">
+        <div class="pf-syn-subhead">
+          <span class="pf-syn-en">ELEMENTAL RESONANCE</span>
+          <span class="pf-syn-ja">あなたと相手の気質の相性</span>
+        </div>
+        <div class="pf-syn-body" id="pf-syn-fiveElement-body">─</div>
+      </div>
+
+      <!-- ② twelveStage -->
+      <div class="pf-syn-section" id="pf-syn-twelveStage">
+        <div class="pf-syn-subhead">
+          <span class="pf-syn-en">LIFE ENERGY</span>
+          <span class="pf-syn-ja">2人のテンポ・関係構築までのタイムライン</span>
+        </div>
+        <div class="pf-syn-body" id="pf-syn-twelveStage-body">─</div>
+      </div>
+
+      <!-- ③ topGodPair -->
+      <div class="pf-syn-section" id="pf-syn-topGodPair">
+        <div class="pf-syn-subhead">
+          <span class="pf-syn-en">INNER COMPASS</span>
+          <span class="pf-syn-ja">人生のモチベーション</span>
+        </div>
+        <div class="pf-syn-body" id="pf-syn-topGodPair-body">─</div>
+      </div>
+
+      <!-- ④ kishin -->
+      <div class="pf-syn-section" id="pf-syn-kishin">
+        <div class="pf-syn-subhead">
+          <span class="pf-syn-en">FORTUNE RHYTHM</span>
+          <span class="pf-syn-ja">2人の運気の同期度</span>
+        </div>
+        <div class="pf-syn-body" id="pf-syn-kishin-body">─</div>
+      </div>
+
+      <!-- ⑤ specialStar -->
+      <div class="pf-syn-section" id="pf-syn-specialStar">
+        <div class="pf-syn-subhead">
+          <span class="pf-syn-en">DESTINY STARS</span>
+          <span class="pf-syn-ja">持って生まれた縁の形</span>
+        </div>
+        <div class="pf-syn-body" id="pf-syn-specialStar-body">─</div>
+      </div>
+
+    </div>
+
+    <!-- ⑥ conclusion(既存 pf-synthesis-comment を流用、ラベルと子要素を変更) -->
+    <div id="pf-synthesis-comment" style="padding:20px 22px;border-radius:14px;background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.22);margin-top:22px;">
+      <div style="font-size:9px;letter-spacing:.2em;margin-bottom:10px;">
+        <span class="pf-syn-en" style="color:rgba(201,168,76,.7);">ESSENCE OF BOND</span>
+        <span class="pf-syn-ja" style="font-size:15px;margin-left:8px;">2人の縁の本質</span>
+      </div>
+      <!-- 旧: pf-mbti-gogyo-comment は一時的に display:none で温存(ステップ 4d で削除予定) -->
+      <div id="pf-mbti-gogyo-comment" style="display:none;">─</div>
+      <!-- 新: conclusion 専用 body -->
+      <div class="pf-syn-body" id="pf-syn-conclusion-body" style="font-size:14px;color:rgba(232,228,217,.88);line-height:2.1;font-family:'Shippori Mincho',serif;">─</div>
     </div>
   </div>
 

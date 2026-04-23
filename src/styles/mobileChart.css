@@ -1,0 +1,206 @@
+/* ════════════════════════════════════════════════════════════════
+   PANDA FORTUNE — モバイルレスポンシブデザイン
+   デザインリファレンス: 四柱推命.zip / PANDA FORTUNE - Chart.html
+   適用範囲: max-width: 768px のみ（PC版は完全に維持）
+   方針: 既存の inline style に !important で上書き、JSX 構造は不変
+   ════════════════════════════════════════════════════════════════ */
+
+/* デザイン共通トークン（モバイル時のみ参照）
+   既存の :root とは衝突しないよう --pf- プレフィックスを使う */
+:root {
+  --pf-ink-0: #08060b;
+  --pf-ink-1: #0f0b14;
+  --pf-ink-2: #17121d;
+  --pf-ink-3: #231a2c;
+
+  --pf-gold-50: #f6e7b9;
+  --pf-gold-100: #e9cf87;
+  --pf-gold-200: #d8b357;
+  --pf-gold-300: #b9933f;
+  --pf-gold-400: #8a6b25;
+
+  --pf-plum: #3a1f4a;
+  --pf-plum-deep: #1f1028;
+
+  --pf-text-high: #f5ecd6;
+  --pf-text-mid:  rgba(245, 236, 214, 0.72);
+  --pf-text-low:  rgba(245, 236, 214, 0.48);
+  --pf-text-dim:  rgba(245, 236, 214, 0.28);
+
+  --pf-hair: rgba(217, 180, 98, 0.18);
+  --pf-hair-strong: rgba(217, 180, 98, 0.32);
+
+  --pf-font-serif: "Noto Serif JP", "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --pf-font-sans:  "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --pf-font-mono:  "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@media (max-width: 768px) {
+  /* ── ベース（背景の vignette・ノイズ感）───────────────── */
+  body {
+    background: var(--pf-ink-0) !important;
+    font-feature-settings: "palt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(80% 50% at 50% 0%, rgba(138, 107, 37, 0.18), transparent 60%),
+      radial-gradient(100% 60% at 50% 100%, rgba(58, 31, 74, 0.30), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  #root { position: relative; z-index: 1; }
+
+  /* ── タブ間隔・タッチターゲット最低化 ──
+     PCではフレックスwrapタブ、モバイルでは横スクロール可で1行化 */
+  .tab-content {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  /* ── カード（pf-card）モバイル化 ─────────────────────── */
+  .pf-card {
+    border-radius: 18px !important;
+    padding: 18px 16px !important;
+    border-color: var(--pf-hair) !important;
+    background: linear-gradient(180deg, rgba(35, 26, 44, 0.6), rgba(15, 11, 20, 0.6)) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+  }
+  .pf-card-glow {
+    box-shadow: 0 0 24px rgba(217, 180, 98, 0.10), 0 4px 18px rgba(0, 0, 0, 0.5) !important;
+    border-color: var(--pf-hair-strong) !important;
+  }
+
+  /* ── セクションラベル ────────────────────────────────── */
+  .pf-section-label {
+    margin-bottom: 14px !important;
+  }
+  .pf-section-en {
+    font-family: var(--pf-font-mono) !important;
+    font-size: 9px !important;
+    letter-spacing: 0.22em !important;
+    color: var(--pf-text-low) !important;
+    opacity: 1 !important;
+    margin-bottom: 4px !important;
+  }
+  .pf-section-ja {
+    font-family: var(--pf-font-serif) !important;
+    font-size: 17px !important;
+    color: var(--pf-gold-100) !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  /* ── ポポ吹き出し ─────────────────────────────────── */
+  .pf-popo {
+    padding: 14px 14px !important;
+    border-radius: 14px !important;
+    border-color: var(--pf-hair) !important;
+    background: linear-gradient(180deg, rgba(58, 31, 74, 0.20), rgba(15, 11, 20, 0.50)) !important;
+    gap: 12px !important;
+  }
+  .pf-popo-text {
+    font-size: 13px !important;
+    line-height: 1.85 !important;
+    color: var(--pf-text-high) !important;
+  }
+
+  /* ── ヘッダー / ロゴ / トップバー ─────────────────── */
+  .hdr {
+    padding: 0 12px !important;
+  }
+  .hdr-logo {
+    font-size: 12px !important;
+    letter-spacing: 0.14em !important;
+  }
+  .hb {
+    font-size: 10px !important;
+    padding: 5px 9px !important;
+  }
+
+  /* ── タイトルブロック（FORTUNE RESULT・◯◯さんの命式）── */
+  .fade-section h1 {
+    font-size: 26px !important;
+    line-height: 1.25 !important;
+  }
+  .fade-section > p:first-of-type {
+    font-size: 9px !important;
+    letter-spacing: 0.36em !important;
+  }
+
+  /* ── 命式表（4柱グリッド）の文字サイズを抑える ───── */
+  /* (App.jsx の inline style で gridTemplateColumns: repeat(4,1fr) を持つ柱カードグリッド) */
+  .pf-card [style*="repeat(4"] p[style*="fontSize: 36"],
+  .pf-card [style*="repeat(4"] p[style*="fontSize:36"] {
+    font-size: 26px !important;
+  }
+
+  /* ── 入力欄・ボタン・select のタッチターゲット最低化 ─ */
+  input, select, textarea, button {
+    min-height: 40px;
+    font-size: 14px;
+  }
+  /* select の native dropdown 文字サイズ */
+  select {
+    font-size: 13px !important;
+  }
+
+  /* ── PopoSpeech 内の panda アイコン縮小 ────────────── */
+  .pf-popo > span > svg,
+  .pf-popo > svg {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  /* ── 余白圧縮 ──────────────────────────────────── */
+  .tab-content > * { gap: 14px; }
+
+  /* ── KaiUnCalendar 等デザイン外要素の最低限調整 ──── */
+  /* グリッドが7列など、横方向にはみ出す場合のスクロール許容 */
+  .tab-content [style*="overflow-x"] {
+    -webkit-overflow-scrolling: touch;
+  }
+  /* カレンダー内の数字・記号は折り返しより縮小優先 */
+  .tab-content [style*="grid-template-columns"] {
+    word-break: keep-all;
+  }
+
+  /* ── Card 内の固定 width を持つ柱表記を防ぐ ─────── */
+  .pf-card > div[style*="display:flex"][style*="gap"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* ── スクロールバー非表示（モバイル iOS Safari） ── */
+  ::-webkit-scrollbar { display: none; }
+  * { scrollbar-width: none; }
+}
+
+/* ── 480px 以下：さらに余白圧縮 ────────────────────── */
+@media (max-width: 480px) {
+  .pf-card {
+    padding: 16px 14px !important;
+    border-radius: 16px !important;
+  }
+  .pf-section-ja {
+    font-size: 16px !important;
+  }
+  .pf-popo-text {
+    font-size: 12.5px !important;
+  }
+  .fade-section h1 {
+    font-size: 22px !important;
+  }
+  /* 4柱表のフォントを更に縮小 */
+  .pf-card [style*="repeat(4"] p[style*="fontSize: 36"],
+  .pf-card [style*="repeat(4"] p[style*="fontSize:36"] {
+    font-size: 22px !important;
+  }
+  /* 4柱グリッドの padding 圧縮（柱カード内） */
+  .pf-card [style*="repeat(4"] [style*="padding: 14px"],
+  .pf-card [style*="repeat(4"] [style*="padding:14px"] {
+    padding: 10px 4px !important;
+  }
+}
