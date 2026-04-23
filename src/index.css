@@ -291,3 +291,139 @@ body { background: var(--bg); font-family: 'Noto Sans JP', sans-serif; color: va
   max-height: 9999px;
   opacity: 1;
 }
+
+/* ==========================================================
+ * AI 鑑定パネル(Claude Haiku 4.5)
+ * ========================================================== */
+.pf-ai-reading-panel {
+  margin: 32px 0;
+  padding: 0;
+}
+
+/* 初期状態(ボタン + 説明) */
+.pf-ai-idle {
+  text-align: center;
+  padding: 36px 20px;
+  background: rgba(139, 69, 200, 0.08);
+  border: 1px solid rgba(201, 168, 76, 0.28);
+  border-radius: 14px;
+}
+.pf-ai-description {
+  margin-bottom: 22px;
+  color: #e0d5f0;
+  line-height: 1.85;
+  font-family: 'Shippori Mincho', 'Hiragino Mincho ProN', serif;
+}
+.pf-ai-description p { margin: 0 0 6px 0; font-size: 13px; }
+.pf-ai-note {
+  font-size: 11px;
+  opacity: 0.65;
+  margin-top: 10px !important;
+  letter-spacing: 0.04em;
+}
+.pf-ai-button {
+  background: linear-gradient(135deg, #c89b50 0%, #8b45c8 100%);
+  color: #fff;
+  border: none;
+  padding: 14px 36px;
+  border-radius: 28px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 14px rgba(200, 155, 80, 0.28);
+  font-family: inherit;
+  letter-spacing: 0.03em;
+}
+.pf-ai-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(200, 155, 80, 0.45);
+}
+.pf-ai-button:active { transform: translateY(0); }
+
+/* ローディング */
+.pf-ai-loading {
+  text-align: center;
+  padding: 56px 20px;
+  background: rgba(139, 69, 200, 0.08);
+  border: 1px solid rgba(201, 168, 76, 0.28);
+  border-radius: 14px;
+}
+.pf-ai-spinner {
+  font-size: 44px;
+  animation: pf-panda-bounce 1.5s ease-in-out infinite;
+  display: inline-block;
+}
+@keyframes pf-panda-bounce {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-10px) rotate(5deg); }
+}
+.pf-ai-loading-text {
+  font-size: 16px;
+  color: #c89b50;
+  margin: 18px 0 6px 0;
+  font-weight: 600;
+  font-family: 'Shippori Mincho', serif;
+}
+.pf-ai-loading-sub {
+  color: #e0d5f0;
+  opacity: 0.75;
+  font-size: 12px;
+  margin: 0;
+}
+
+/* 鑑定文表示 */
+.pf-ai-reading-text {
+  padding: 28px 22px;
+  background: rgba(20, 15, 40, 0.55);
+  border: 1px solid rgba(201, 168, 76, 0.2);
+  border-radius: 14px;
+  line-height: 1.95;
+  color: #e8e2f0;
+  font-family: 'Shippori Mincho', 'Noto Serif JP', 'Hiragino Mincho ProN', serif;
+}
+.pf-ai-reading-text pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: inherit;
+  font-size: 14px;
+  margin: 0;
+}
+.pf-ai-cursor {
+  color: #c89b50;
+  animation: pf-cursor-blink 1s steps(2) infinite;
+  margin-left: 2px;
+  font-size: 14px;
+}
+@keyframes pf-cursor-blink { to { opacity: 0; } }
+.pf-ai-cache-note {
+  text-align: center;
+  font-size: 11px;
+  color: #888;
+  margin-top: 14px;
+  opacity: 0.7;
+}
+
+/* フォールバック通知 */
+.pf-ai-fallback-notice {
+  text-align: center;
+  padding: 16px 20px;
+  margin: 16px 0;
+  background: rgba(200, 120, 80, 0.1);
+  border: 1px solid rgba(200, 120, 80, 0.28);
+  border-radius: 10px;
+  color: #c89b80;
+}
+.pf-ai-fallback-notice p {
+  margin: 0;
+  font-size: 12px;
+  font-family: 'Shippori Mincho', serif;
+}
+
+@media (max-width: 600px) {
+  .pf-ai-idle,
+  .pf-ai-loading { padding: 28px 14px; }
+  .pf-ai-button { padding: 12px 26px; font-size: 13px; }
+  .pf-ai-reading-text { padding: 18px 14px; }
+  .pf-ai-reading-text pre { font-size: 13px; }
+}

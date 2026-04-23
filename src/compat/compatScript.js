@@ -13,6 +13,7 @@ import { _getJuniunsei } from '../engines/meishikiEngine.js';
 import { GENMEI_TEXTS, getGenmei, getGenmeiTextsByLang } from '../data/genmeiText.js';
 import { NIKCHU_PROFILES_KR } from '../data/compatDataKr.js';
 import * as CSK from '../data/compatScriptKr.js';
+import { initAiReadingPanel } from './aiReadingPanel.js';
 
 // 外部参照互換
 window.MBTI_32_COMPAT = MBTI_32_COMPAT;
@@ -2830,6 +2831,58 @@ window._pfRunCompatScript = function() {
       }
     } catch (eSyn) {
       console.warn('[compatScript] 新 6 セクション流し込みエラー:', eSyn);
+    }
+
+    // ══ AI 鑑定パネル初期化(Claude Haiku 4.5) ══
+    try {
+      var _ai = window._pfCompatData || null;
+      if (_ai && myCalc && ptCalc) {
+        var _aiReqData = {
+          self: {
+            year: my.year, month: my.month, day: my.day,
+            hourInput: my.hour || null,
+            placeName: my.placeName || '',
+            gender: my.gender || '',
+            mbti: my.mbti || '',
+            pillars: myCalc.pillars,
+            gokyo: myCalc.gokyo,
+            topGod: myCalc.topGod || '',
+            genmei: (function(){
+              try {
+                return getGenmei(myCalc.pillars.day.kan, myCalc.pillars.month.shi, myCalc.pillars.month.daysFromSetsu);
+              } catch(_){ return ''; }
+            })(),
+          },
+          partner: {
+            year: partner.year, month: partner.month, day: partner.day,
+            hourInput: partner.hour || null,
+            placeName: partner.placeName || '',
+            gender: partner.gender || '',
+            mbti: partner.mbti || '',
+            pillars: ptCalc.pillars,
+            gokyo: ptCalc.gokyo,
+            topGod: ptCalc.topGod || '',
+            genmei: (function(){
+              try {
+                return getGenmei(ptCalc.pillars.day.kan, ptCalc.pillars.month.shi, ptCalc.pillars.month.daysFromSetsu);
+              } catch(_){ return ''; }
+            })(),
+          },
+          hints: {
+            gogyoRel: _ai.compat_type || '',
+            gokanResult: _ai.kangoType || _ai.isDaikichien ? (_ai.kangoType || '大吉縁') : '',
+            nichishiRel: (_ai.hasShigou ? '日支六合' : '') || (_ai.hasMShigou ? '月支六合' : ''),
+            kishinMatch: (_ai.sections && _ai.sections.kishin && _ai.sections.kishin.meta && _ai.sections.kishin.meta.type) || 'neutral',
+            mbtiCompatLabel: _ai.mbtiCompatLabel || (_ai.axisAnalysis ? '共鳴型' : ''),
+            bcs_n: _ai.bcs_n, hik_n: _ai.hik_n, mbt_n: _ai.mbt_n, newLove: _ai.newLove,
+          },
+          relation: (partner && partner.relation) || '恋人・パートナー',
+          totalScore: _ai.newTotal || _ai.totalWeighted || 0,
+        };
+        initAiReadingPanel({ reqData: _aiReqData });
+      }
+    } catch (eAi) {
+      console.warn('[compatScript] AI パネル初期化エラー:', eAi);
     }
 
     // ── 統合鑑定文（MBTI両者入力時のみ） ───────────────────────────
