@@ -1,4 +1,56 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { kv } from '@vercel/kv';
+
+// ==========================================================
+// キャッシュキー生成
+// ==========================================================
+/**
+ * 2 人の命式データから一意のキャッシュキーを生成
+ * 命式の主要要素のみから生成(占術的に鑑定文が変わらない範囲)
+ */
+async function generateCacheKey(self, partner, relation) {
+  const keyData = {
+    self: {
+      year: self.year,
+      month: self.month,
+      day: self.day,
+      hour: self.hourInput,
+      gender: self.gender,
+      mbti: self.mbti,
+      pillars: {
+        year: self.pillars.year.kan + self.pillars.year.shi,
+        month: self.pillars.month.kan + self.pillars.month.shi,
+        day: self.pillars.day.kan + self.pillars.day.shi,
+        hour: self.pillars.hour ? (self.pillars.hour.kan + self.pillars.hour.shi) : null,
+      },
+    },
+    partner: {
+      year: partner.year,
+      month: partner.month,
+      day: partner.day,
+      hour: partner.hourInput,
+      gender: partner.gender,
+      mbti: partner.mbti,
+      pillars: {
+        year: partner.pillars.year.kan + partner.pillars.year.shi,
+        month: partner.pillars.month.kan + partner.pillars.month.shi,
+        day: partner.pillars.day.kan + partner.pillars.day.shi,
+        hour: partner.pillars.hour ? (partner.pillars.hour.kan + partner.pillars.hour.shi) : null,
+      },
+    },
+    relation,
+  };
+
+  // JSON 文字列化 → SHA-256 ハッシュ(Edge Runtime 対応)
+  const jsonStr = JSON.stringify(keyData);
+  const encoder = new TextEncoder();
+  const data = encoder.encode(jsonStr);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+
+  return `reading:${hashHex}`;
+}
 
 /**
  * Vercel Edge Function - AI 鑑定文生成
@@ -279,6 +331,46 @@ export default async function handler(req) {
     }
 
     const tier = getTier(totalScore);
+
+    // ==========================================================
+    // キャッシュチェック
+    // ==========================================================
+    const cacheKey = await generateCacheKey(self, partner, relation);
+
+    try {
+      const cached = await kv.get(cacheKey);
+      if (cached && typeof cached === 'string' && cached.length > 100) {
+        // キャッシュヒット: 即座に全文を返す(ストリーミング形式で)
+        console.log(`[Cache HIT] key=${cacheKey.slice(0, 20)}...`);
+
+        const encoderHit = new TextEncoder();
+        const readableHit = new ReadableStream({
+          start(controller) {
+            // 全文を 1 チャンクとして送る
+            const data = JSON.stringify({ type: 'text', text: cached });
+            controller.enqueue(encoderHit.encode(`data: ${data}\n\n`));
+
+            const done = JSON.stringify({ type: 'done', cached: true });
+            controller.enqueue(encoderHit.encode(`data: ${done}\n\n`));
+            controller.close();
+          },
+        });
+
+        return new Response(readableHit, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Cache': 'HIT',
+          },
+        });
+      }
+      console.log(`[Cache MISS] key=${cacheKey.slice(0, 20)}...`);
+    } catch (cacheError) {
+      console.error('[Cache Error]', cacheError);
+      // キャッシュ読み込み失敗時は通常生成に進む(サービス継続)
+    }
+
     const userPrompt = buildUserPrompt(self, partner, hints, relation, totalScore, tier);
 
     // Anthropic SDK の初期化
@@ -302,17 +394,34 @@ export default async function handler(req) {
 
     // SSE レスポンスとしてクライアントに中継
     const encoder = new TextEncoder();
+    let fullText = '';  // 生成された全文を蓄積(キャッシュ保存用)
+
     const readable = new ReadableStream({
       async start(controller) {
         try {
           for await (const event of stream) {
             if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              fullText += event.delta.text;  // 蓄積
               const data = JSON.stringify({ type: 'text', text: event.delta.text });
               controller.enqueue(encoder.encode(`data: ${data}\n\n`));
             }
           }
+
+          // ==========================================================
+          // 生成完了時にキャッシュに保存(30 日間 TTL)
+          // ==========================================================
+          if (fullText.length > 100) {
+            try {
+              await kv.set(cacheKey, fullText, { ex: 60 * 60 * 24 * 30 });  // 30 日
+              console.log(`[Cache SET] key=${cacheKey.slice(0, 20)}..., length=${fullText.length}`);
+            } catch (cacheErr) {
+              console.error('[Cache Save Error]', cacheErr);
+              // キャッシュ保存失敗時も処理は続行
+            }
+          }
+
           // 完了通知
-          const done = JSON.stringify({ type: 'done' });
+          const done = JSON.stringify({ type: 'done', cached: false });
           controller.enqueue(encoder.encode(`data: ${done}\n\n`));
           controller.close();
         } catch (error) {
@@ -328,6 +437,7 @@ export default async function handler(req) {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
+        'X-Cache': 'MISS',
       },
     });
   } catch (error) {
