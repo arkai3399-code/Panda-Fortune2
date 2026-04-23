@@ -427,3 +427,35 @@ body { background: var(--bg); font-family: 'Noto Sans JP', sans-serif; color: va
   .pf-ai-reading-text { padding: 18px 14px; }
   .pf-ai-reading-text pre { font-size: 13px; }
 }
+
+/* 3 セクション分割表示(本人 / 相手 / 相性) */
+.pf-ai-section {
+  margin-bottom: 28px;
+  padding-bottom: 28px;
+  border-bottom: 1px dashed rgba(201, 168, 76, 0.22);
+}
+.pf-ai-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.pf-ai-section-loading {
+  text-align: center;
+  padding: 14px;
+  color: #c89b50;
+  font-size: 12px;
+  opacity: 0.82;
+  letter-spacing: 0.03em;
+  font-family: 'Shippori Mincho', serif;
+}
+.pf-ai-section-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Shippori Mincho', 'Noto Serif JP', 'Hiragino Mincho ProN', serif;
+  font-size: 14px;
+  line-height: 1.95;
+  margin: 0;
+}
+.pf-ai-section-cursor {
+  display: inline;
+}

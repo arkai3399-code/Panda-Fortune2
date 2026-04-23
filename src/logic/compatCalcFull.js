@@ -2643,6 +2643,12 @@ export function calcCompatDetail(myCalc, ptCalc, partner, myInput, opts) {
           : null,
       });
       synthMeta20 = _buildSynthesisMeta(synthSections20);
+      // トップレベルの result に mbtiCompatLabel を露出(AI プロンプト送信用)
+      try {
+        result.mbtiCompatLabel = (myBase20 && ptBase20)
+          ? _getMbtiCompatType(myBase20, ptBase20).label
+          : null;
+      } catch(_){ result.mbtiCompatLabel = null; }
     } catch (eSect) {
       console.warn('[compatCalcFull] _buildSynthesisSections error:', eSect);
       synthSections20 = {};

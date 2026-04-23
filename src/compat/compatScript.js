@@ -2873,12 +2873,15 @@ window._pfRunCompatScript = function() {
             gokanResult: _ai.kangoType || _ai.isDaikichien ? (_ai.kangoType || '大吉縁') : '',
             nichishiRel: (_ai.hasShigou ? '日支六合' : '') || (_ai.hasMShigou ? '月支六合' : ''),
             kishinMatch: (_ai.sections && _ai.sections.kishin && _ai.sections.kishin.meta && _ai.sections.kishin.meta.type) || 'neutral',
-            mbtiCompatLabel: _ai.mbtiCompatLabel || (_ai.axisAnalysis ? '共鳴型' : ''),
+            mbtiCompatLabel: _ai.mbtiCompatLabel || '',
             bcs_n: _ai.bcs_n, hik_n: _ai.hik_n, mbt_n: _ai.mbt_n, newLove: _ai.newLove,
           },
           relation: (partner && partner.relation) || '恋人・パートナー',
           totalScore: _ai.newTotal || _ai.totalWeighted || 0,
         };
+        console.log('[AI Request] mbtiCompatLabel =', _aiReqData.hints.mbtiCompatLabel,
+                    'mbt_n =', _aiReqData.hints.mbt_n,
+                    'totalScore =', _aiReqData.totalScore);
         initAiReadingPanel({ reqData: _aiReqData });
       }
     } catch (eAi) {
