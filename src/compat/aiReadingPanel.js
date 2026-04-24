@@ -52,7 +52,7 @@ function _setFallbackNotice(show) {
 // 各状態のレンダラ
 // =============================================================
 function _renderIdle(panel, reqData) {
-  _setSynthesisVisibility(true);
+  _setSynthesisVisibility(false);
   _setFallbackNotice(false);
   panel.innerHTML = `
     <div class="pf-ai-idle">
