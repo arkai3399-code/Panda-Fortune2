@@ -17,6 +17,7 @@ import { langPick } from '../i18n/templateHelpers.js';
 import * as AT from '../data/appTemplatesKr.js';
 import { getZokanList, getMonthZokan } from '../data/genmeiText.js';
 import { getStarDescByLang, buildStarFallback_JA, buildStarFallback_KR, getKuubouDescByLang, getTsuhenInfoByLang } from '../data/meishikiInlineDescs.js';
+import { getTenkanIcon, getTenkanYomi } from '../data/tenkanIcons.js';
 import TodayFortuneBlock from '../components/blocks/TodayFortuneBlock.jsx';
 import HalfYearBlock from '../components/blocks/HalfYearBlock.jsx';
 import KaiUnCalendar from '../components/blocks/KaiUnCalendar.jsx';
@@ -758,11 +759,15 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
                         {/* 天干 */}
                         <div style={{ padding: "14px 8px 8px", textAlign: "center", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                           <p style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", marginBottom: 4, letterSpacing: "0.1em" }}>天干</p>
+                          {getTenkanIcon(p.kan) && (
+                            <div style={{ width: 48, height: 48, margin: "0 auto 4px" }} dangerouslySetInnerHTML={{ __html: getTenkanIcon(p.kan) }} />
+                          )}
                           <p style={{
                             fontSize: 36, fontFamily: "'Shippori Mincho',serif", fontWeight: 700, lineHeight: 1,
                             color: isDay ? C.goldLight : gc,
                           }}>{p.kan}</p>
-                          <p style={{ fontSize: 9, color: gc, marginTop: 5, opacity: 0.8 }}>{kanGogyo}</p>
+                          <p style={{ fontSize: 10, color: isDay ? C.gold : "rgba(255,255,255,0.35)", marginTop: 4, opacity: 0.7 }}>{getTenkanYomi(p.kan)}</p>
+                          <p style={{ fontSize: 9, color: gc, marginTop: 3, opacity: 0.8 }}>{kanGogyo}</p>
                         </div>
 
                         {/* 地支 */}
