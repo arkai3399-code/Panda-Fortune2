@@ -4555,33 +4555,33 @@ function FortuneResult() {
                     return (
                       <div key={i} style={{
                         borderRadius: 14,
-                        border: isDay ? `1.5px solid ${C.gold}` : "1px solid rgba(0,0,0,0.1)",
-                        background: isDay ? "#faf6ee" : "#f5f1e8",
+                        border: isDay ? `1.5px solid ${C.gold}` : "1px solid rgba(80,60,30,0.18)",
+                        background: isDay ? "#f0e4c8" : "#e8dcc0",
                         overflow: "hidden",
                         position: "relative",
                       }}>
                         {/* 柱ラベル */}
                         <div style={{
-                          padding: "8px 0 6px",
+                          padding: "10px 0 8px",
                           textAlign: "center",
-                          background: isDay ? "rgba(201,168,76,0.12)" : "rgba(0,0,0,0.03)",
-                          borderBottom: "1px solid rgba(0,0,0,0.06)",
+                          background: isDay ? "rgba(201,168,76,0.15)" : "rgba(80,60,30,0.06)",
+                          borderBottom: "1px solid rgba(80,60,30,0.12)",
                         }}>
-                          <p style={{ fontSize: 11, color: isDay ? "#8a6a20" : "#5a5040", letterSpacing: "0.12em", fontWeight: isDay ? 700 : 400 }}>{p.label}</p>
+                          <p style={{ fontSize: 11, color: isDay ? "#8a6a20" : "#5a4a30", letterSpacing: "0.12em", fontWeight: isDay ? 700 : 400 }}>{p.label}</p>
                         </div>
 
                         {/* 天干 */}
-                        <div style={{ padding: "14px 8px 8px", textAlign: "center", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-                          <p style={{ fontSize: 9, color: "rgba(0,0,0,0.3)", marginBottom: 4, letterSpacing: "0.1em" }}>天干</p>
+                        <div style={{ padding: "16px 8px 10px", textAlign: "center", borderBottom: "1px solid rgba(80,60,30,0.10)" }}>
+                          <p style={{ fontSize: 11, color: "rgba(60,40,20,0.4)", marginBottom: 6, letterSpacing: "0.1em" }}>天干</p>
                           {getTenkanIcon(p.kan) && (
-                            <div style={{ width: 48, height: 48, margin: "0 auto 4px" }} dangerouslySetInnerHTML={{ __html: getTenkanIcon(p.kan) }} />
+                            <div style={{ width: 48, height: 48, margin: "0 auto 6px" }} dangerouslySetInnerHTML={{ __html: getTenkanIcon(p.kan) }} />
                           )}
                           <p style={{
-                            fontSize: 36, fontFamily: "'Shippori Mincho',serif", fontWeight: 700, lineHeight: 1,
+                            fontSize: 44, fontFamily: "'Shippori Mincho',serif", fontWeight: 700, lineHeight: 1,
                             color: isDay ? "#8a6a20" : gc,
                           }}>{p.kan}</p>
-                          <p style={{ fontSize: 10, color: isDay ? "#8a6a20" : "rgba(0,0,0,0.4)", marginTop: 4, opacity: 0.7 }}>{getTenkanYomi(p.kan)}</p>
-                          <p style={{ fontSize: 9, color: gc, marginTop: 3 }}>{kanGogyo}</p>
+                          <p style={{ fontSize: 12, color: isDay ? "#8a6a20" : "rgba(60,40,20,0.5)", marginTop: 6 }}>{getTenkanYomi(p.kan)}</p>
+                          <p style={{ fontSize: 13, color: gc, marginTop: 4, fontWeight: 600 }}>{kanGogyo}</p>
                         </div>
 
                         {/* 地支 */}
@@ -4589,34 +4589,34 @@ function FortuneResult() {
                           const JUNISHI_G2 = ['水','土','木','木','土','火','火','土','金','金','土','水'];
                           const JUNISHI_L2 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
                           const shiGogyo = JUNISHI_G2[JUNISHI_L2.indexOf(p.shi)] || '土';
-                          const sgc = GOGYO_COLOR[shiGogyo] || "#5a5040";
+                          const sgc = GOGYO_COLOR[shiGogyo] || "#5a4a30";
                           return (
-                            <div style={{ padding: "10px 8px 8px", textAlign: "center", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-                              <p style={{ fontSize: 9, color: "rgba(0,0,0,0.3)", marginBottom: 4, letterSpacing: "0.1em" }}>地支</p>
+                            <div style={{ padding: "14px 8px 10px", textAlign: "center", borderBottom: "1px solid rgba(80,60,30,0.10)" }}>
+                              <p style={{ fontSize: 11, color: "rgba(60,40,20,0.4)", marginBottom: 6, letterSpacing: "0.1em" }}>地支</p>
                               <p style={{
-                                fontSize: 36, fontFamily: "'Shippori Mincho',serif", fontWeight: 700, lineHeight: 1,
+                                fontSize: 44, fontFamily: "'Shippori Mincho',serif", fontWeight: 700, lineHeight: 1,
                                 color: isDay ? "#8a6a20" : sgc,
                               }}>{p.shi}</p>
-                              <p style={{ fontSize: 9, color: sgc, marginTop: 5 }}>{shiGogyo}</p>
+                              <p style={{ fontSize: 13, color: sgc, marginTop: 6, fontWeight: 600 }}>{shiGogyo}</p>
                             </div>
                           );
                         })()}
 
                         {/* 十神 */}
-                        <div style={{ padding: "8px 6px", textAlign: "center", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-                          <p style={{ fontSize: 9, color: "rgba(0,0,0,0.3)", marginBottom: 4, letterSpacing: "0.1em" }}>十神</p>
-                          <p style={{ fontSize: 12, color: isDay ? "#8a6a20" : "#3a3020", fontWeight: 600 }}>{p.jisshin || "—"}</p>
+                        <div style={{ padding: "10px 6px", textAlign: "center", borderBottom: "1px solid rgba(80,60,30,0.10)" }}>
+                          <p style={{ fontSize: 11, color: "rgba(60,40,20,0.4)", marginBottom: 4, letterSpacing: "0.1em" }}>十神</p>
+                          <p style={{ fontSize: 14, color: isDay ? "#8a6a20" : "#3a3020", fontWeight: 600 }}>{p.jisshin || "—"}</p>
                         </div>
 
                         {/* 十二運 */}
-                        <div style={{ padding: "8px 6px", textAlign: "center", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-                          <p style={{ fontSize: 9, color: "rgba(0,0,0,0.3)", marginBottom: 4, letterSpacing: "0.1em" }}>十二運</p>
-                          <p style={{ fontSize: 12, color: "#5a5040" }}>{p.unsei || "—"}</p>
+                        <div style={{ padding: "10px 6px", textAlign: "center", borderBottom: "1px solid rgba(80,60,30,0.10)" }}>
+                          <p style={{ fontSize: 11, color: "rgba(60,40,20,0.4)", marginBottom: 4, letterSpacing: "0.1em" }}>十二運</p>
+                          <p style={{ fontSize: 14, color: "#4a3a20" }}>{p.unsei || "—"}</p>
                         </div>
 
                         {/* 蔵干（月柱は元命に該当する蔵干をゴールドで強調） */}
-                        <div style={{ padding: "8px 6px 12px", textAlign: "center" }}>
-                          <p style={{ fontSize: 9, color: "rgba(0,0,0,0.3)", marginBottom: 6, letterSpacing: "0.1em" }}>蔵干</p>
+                        <div style={{ padding: "10px 6px 14px", textAlign: "center" }}>
+                          <p style={{ fontSize: 11, color: "rgba(60,40,20,0.4)", marginBottom: 6, letterSpacing: "0.1em" }}>蔵干</p>
                           <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "center" }}>
                             {zokan.map((k, ki) => {
                               const isGenmei = isMonth && k === genmeiKan;
