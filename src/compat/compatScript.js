@@ -2833,6 +2833,10 @@ window._pfRunCompatScript = function() {
       console.warn('[compatScript] 新 6 セクション流し込みエラー:', eSyn);
     }
 
+    // ══ SYNTHESIS サブセクションを初期非表示 ══
+    var _synSub = document.getElementById('pf-synthesis-subsections');
+    if (_synSub) _synSub.style.display = 'none';
+
     // ══ AI 鑑定パネル初期化(Claude Haiku 4.5) ══
     try {
       var _ai = window._pfCompatData || null;
