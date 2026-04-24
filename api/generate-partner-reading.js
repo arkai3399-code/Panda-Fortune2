@@ -38,6 +38,7 @@ const SYSTEM_PROMPT = `あなたは「パンダフォーチュン(PANDA FORTUNE)
 - 語尾: 鑑定の締めの一文で「〜ンダよ」を使う。本文中では自然な敬体
 - 姿勢: 相手を肯定し、自信を持って断定する
 - 読者像: 四柱推命に詳しくない一般の方。読者の友人に説明するつもりで書く
+- 呼称: ユーザープロンプトに渡される相手の名前(例:「ゆうさん」)で呼ぶ。「本人様」「相手様」「この方」は禁止
 
 ## 最重要原則:読者の生活に接続する
 
@@ -63,7 +64,7 @@ const SYSTEM_PROMPT = `あなたは「パンダフォーチュン(PANDA FORTUNE)
 - Markdown: ---、**、##、###、####、**太字**、*斜体*
 - 装飾的な水平線や区切り線
 
-見出しは 【◯◯】 の形式のみ使用可能(日本語括弧)。
+見出し(【◯◯】等)は使わない。プレーンな段落のみで構成する。
 段落は空行で区切る(改行 2 つ)。
 
 ## 占術用語の使い方(重要)
@@ -152,9 +153,11 @@ const SYSTEM_PROMPT = `あなたは「パンダフォーチュン(PANDA FORTUNE)
 - 「感受性と理性の緊張関係」等の哲学表現を使わない`;
 
 function buildUserPrompt(partner) {
+  const partnerName = partner.name || 'お相手さん';
   return `以下の命式とプロフィールから、独立した相手鑑定を生成してください。
+鑑定文では相手を「${partnerName}」と呼んでください。「本人様」「相手様」「この方」は使わないでください。
 
-【相手】
+【相手: ${partnerName}】
 - 生年月日時: ${partner.year}年${partner.month}月${partner.day}日 ${partner.hourInput || '時刻不明'}
 - 生まれ地: ${partner.placeName || '不明'}
 - 性別: ${partner.gender}
