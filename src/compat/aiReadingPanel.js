@@ -59,7 +59,7 @@ function _renderIdle(panel, reqData) {
       <div class="pf-ai-description">
         <p>🐼 ポポがお二人の命式を正統派四柱推命で読み解き、</p>
         <p>本人 → 相手 → 相性の 3 部構成・約 3,600 字の特別鑑定をお届けします。</p>
-        <p class="pf-ai-note">※ 初回生成は 30〜40 秒ほどかかります(2 回目以降はキャッシュから即表示)</p>
+        <p class="pf-ai-note">※初回生成は少し時間がかかるンダ</p>
       </div>
       <button type="button" class="pf-ai-button" id="pf-ai-button">
         あなただけの鑑定文を読む
