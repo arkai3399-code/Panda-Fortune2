@@ -27,7 +27,7 @@ export function initAiReadingPanel({ reqData }) {
 }
 
 function _setSynthesisVisibility(visible) {
-  const el = document.getElementById('pf-acc-synthesis');
+  const el = document.getElementById('pf-synthesis-subsections');
   if (el) el.style.display = visible ? '' : 'none';
 }
 
@@ -39,7 +39,7 @@ function _setFallbackNotice(show) {
       note.id = 'pf-ai-fallback-notice';
       note.className = 'pf-ai-fallback-notice';
       note.innerHTML = '<p>AI 鑑定がご用意できませんでした。代わりに詳細分析をご覧くださいンダ。</p>';
-      const syn = document.getElementById('pf-acc-synthesis');
+      const syn = document.getElementById('pf-synthesis-subsections');
       if (syn && syn.parentNode) syn.parentNode.insertBefore(note, syn);
     }
     note.style.display = '';

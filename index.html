@@ -403,100 +403,6 @@
 
   </div>
 
-  <!-- ✦ AI 鑑定パネル(Claude Haiku 4.5 による特別鑑定) -->
-  <div id="pf-ai-reading-panel" class="pf-ai-reading-panel"></div>
-
-  <!-- ✦ 四柱推命 × MBTI 深化ブロック（4軸統合版） -->
-  <div class="card" id="pf-acc-synthesis">
-    <div class="sec-label pf-acc-trigger" data-acc="pf-acc-synthesis">
-      <span class="sec-en" style="color:rgba(201,168,76,.7);">✦ SYNTHESIS</span>
-      <span class="sec-ja" style="font-size:18px;">2つの占いが重なると見えてくるもの</span>
-      <span class="pf-acc-arrow">▼</span>
-    </div>
-    <div style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:20px;">
-      四柱推命（生年月日）とMBTIという異なる2つのアプローチを<strong style="color:var(--gold-dim);">4つの軸</strong>で重ねると、2人の本質的な縁が見えてくるんダよ。
-    </div>
-
-    <!-- あなたの命式 × MBTI / 相手の命式 × MBTI（常時表示） -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
-      <div style="padding:14px 16px;border-radius:12px;background:rgba(80,140,210,.06);border:1px solid rgba(80,140,210,.16);">
-        <div style="font-size:9px;letter-spacing:.15em;color:rgba(140,190,240,.5);margin-bottom:8px;">あなたの命式 × MBTI</div>
-        <div id="pf-gogyo-you-title" style="font-family:'Shippori Mincho',serif;font-size:13px;font-weight:700;color:rgba(140,190,240,.9);margin-bottom:6px;">─</div>
-        <div id="pf-gogyo-you-gap" style="display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;margin-bottom:8px;"></div>
-        <div id="pf-gogyo-you-body" style="font-size:12px;color:rgba(232,228,217,.72);line-height:1.9;font-family:'Shippori Mincho',serif;">─</div>
-      </div>
-      <div style="padding:14px 16px;border-radius:12px;background:rgba(224,96,122,.05);border:1px solid rgba(224,96,122,.16);">
-        <div style="font-size:9px;letter-spacing:.15em;color:rgba(224,96,122,.5);margin-bottom:8px;">相手の命式 × MBTI</div>
-        <div id="pf-gogyo-them-title" style="font-family:'Shippori Mincho',serif;font-size:13px;font-weight:700;color:rgba(224,96,122,.9);margin-bottom:6px;">─</div>
-        <div id="pf-gogyo-them-gap" style="display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;margin-bottom:8px;"></div>
-        <div id="pf-gogyo-them-body" style="font-size:12px;color:rgba(232,228,217,.72);line-height:1.9;font-family:'Shippori Mincho',serif;">─</div>
-      </div>
-    </div>
-
-    <!-- Phase 3b: 5 セクション表示(fiveElement / twelveStage / topGodPair / kishin / specialStar)
-         conclusion は下段の pf-synthesis-comment(gold 強調枠)を流用 -->
-    <div id="pf-syn-sections" style="display:flex;flex-direction:column;gap:22px;margin-top:28px;">
-
-      <!-- ① fiveElement -->
-      <div class="pf-syn-section" id="pf-syn-fiveElement">
-        <div class="pf-syn-subhead">
-          <span class="pf-syn-en">ELEMENTAL RESONANCE</span>
-          <span class="pf-syn-ja">あなたと相手の気質の相性</span>
-        </div>
-        <div class="pf-syn-body" id="pf-syn-fiveElement-body">─</div>
-      </div>
-
-      <!-- ② twelveStage -->
-      <div class="pf-syn-section" id="pf-syn-twelveStage">
-        <div class="pf-syn-subhead">
-          <span class="pf-syn-en">LIFE ENERGY</span>
-          <span class="pf-syn-ja">2人のテンポ・関係構築までのタイムライン</span>
-        </div>
-        <div class="pf-syn-body" id="pf-syn-twelveStage-body">─</div>
-      </div>
-
-      <!-- ③ topGodPair -->
-      <div class="pf-syn-section" id="pf-syn-topGodPair">
-        <div class="pf-syn-subhead">
-          <span class="pf-syn-en">INNER COMPASS</span>
-          <span class="pf-syn-ja">人生のモチベーション</span>
-        </div>
-        <div class="pf-syn-body" id="pf-syn-topGodPair-body">─</div>
-      </div>
-
-      <!-- ④ kishin -->
-      <div class="pf-syn-section" id="pf-syn-kishin">
-        <div class="pf-syn-subhead">
-          <span class="pf-syn-en">FORTUNE RHYTHM</span>
-          <span class="pf-syn-ja">2人の運気の同期度</span>
-        </div>
-        <div class="pf-syn-body" id="pf-syn-kishin-body">─</div>
-      </div>
-
-      <!-- ⑤ specialStar -->
-      <div class="pf-syn-section" id="pf-syn-specialStar">
-        <div class="pf-syn-subhead">
-          <span class="pf-syn-en">DESTINY STARS</span>
-          <span class="pf-syn-ja">持って生まれた縁の形</span>
-        </div>
-        <div class="pf-syn-body" id="pf-syn-specialStar-body">─</div>
-      </div>
-
-    </div>
-
-    <!-- ⑥ conclusion(既存 pf-synthesis-comment を流用、ラベルと子要素を変更) -->
-    <div id="pf-synthesis-comment" style="padding:20px 22px;border-radius:14px;background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.22);margin-top:22px;">
-      <div style="font-size:9px;letter-spacing:.2em;margin-bottom:10px;">
-        <span class="pf-syn-en" style="color:rgba(201,168,76,.7);">ESSENCE OF BOND</span>
-        <span class="pf-syn-ja" style="font-size:15px;margin-left:8px;">2人の縁の本質</span>
-      </div>
-      <!-- 旧: pf-mbti-gogyo-comment は一時的に display:none で温存(ステップ 4d で削除予定) -->
-      <div id="pf-mbti-gogyo-comment" style="display:none;">─</div>
-      <!-- 新: conclusion 専用 body -->
-      <div class="pf-syn-body" id="pf-syn-conclusion-body" style="font-size:14px;color:rgba(232,228,217,.88);line-height:2.1;font-family:'Shippori Mincho',serif;">─</div>
-    </div>
-  </div>
-
   <!-- ⑥ 二人の相性のいい時期 -->
   <div class="card" id="pf-acc-timing">
     <div class="sec-label pf-acc-trigger" data-acc="pf-acc-timing">
@@ -788,6 +694,105 @@
       <p id="pf-popo-final" class="popo-tx">総合的に見て、あなたとAさんの相性は「一緒にいるほどお互いが成長できる、深い縁」ンダ✨ 生年月日の占いでもMBTIでも「補い合える関係」という結果が出ているんだよ。Aさんはあなたの運気そのものを上げてくれる存在だから、長く関係を続けるほど2人ともよくなっていく可能性が高いんダ。大事なことを話し合うなら5月と11月がベストンダよ🐼</p>
     </div>
   </div>
+
+  <!-- ✦ 四柱推命 × MBTI 深化ブロック（4軸統合版） -->
+  <div class="card" id="pf-acc-synthesis">
+    <div class="sec-label pf-acc-trigger" data-acc="pf-acc-synthesis">
+      <span class="sec-en" style="color:rgba(201,168,76,.7);">✦ SYNTHESIS</span>
+      <span class="sec-ja" style="font-size:18px;">2つの占いが重なると見えてくるもの</span>
+      <span class="pf-acc-arrow">▼</span>
+    </div>
+
+    <!-- ✦ AI 鑑定パネル(Claude Haiku 4.5 による特別鑑定) -->
+    <div id="pf-ai-reading-panel" class="pf-ai-reading-panel"></div>
+
+    <!-- 定型サブセクション（AI 鑑定成功時は非表示、エラー時のみ表示） -->
+    <div id="pf-synthesis-subsections">
+    <div style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:20px;">
+      四柱推命（生年月日）とMBTIという異なる2つのアプローチを<strong style="color:var(--gold-dim);">4つの軸</strong>で重ねると、2人の本質的な縁が見えてくるんダよ。
+    </div>
+
+    <!-- あなたの命式 × MBTI / 相手の命式 × MBTI（常時表示） -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+      <div style="padding:14px 16px;border-radius:12px;background:rgba(80,140,210,.06);border:1px solid rgba(80,140,210,.16);">
+        <div style="font-size:9px;letter-spacing:.15em;color:rgba(140,190,240,.5);margin-bottom:8px;">あなたの命式 × MBTI</div>
+        <div id="pf-gogyo-you-title" style="font-family:'Shippori Mincho',serif;font-size:13px;font-weight:700;color:rgba(140,190,240,.9);margin-bottom:6px;">─</div>
+        <div id="pf-gogyo-you-gap" style="display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;margin-bottom:8px;"></div>
+        <div id="pf-gogyo-you-body" style="font-size:12px;color:rgba(232,228,217,.72);line-height:1.9;font-family:'Shippori Mincho',serif;">─</div>
+      </div>
+      <div style="padding:14px 16px;border-radius:12px;background:rgba(224,96,122,.05);border:1px solid rgba(224,96,122,.16);">
+        <div style="font-size:9px;letter-spacing:.15em;color:rgba(224,96,122,.5);margin-bottom:8px;">相手の命式 × MBTI</div>
+        <div id="pf-gogyo-them-title" style="font-family:'Shippori Mincho',serif;font-size:13px;font-weight:700;color:rgba(224,96,122,.9);margin-bottom:6px;">─</div>
+        <div id="pf-gogyo-them-gap" style="display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;margin-bottom:8px;"></div>
+        <div id="pf-gogyo-them-body" style="font-size:12px;color:rgba(232,228,217,.72);line-height:1.9;font-family:'Shippori Mincho',serif;">─</div>
+      </div>
+    </div>
+
+    <!-- Phase 3b: 5 セクション表示(fiveElement / twelveStage / topGodPair / kishin / specialStar)
+         conclusion は下段の pf-synthesis-comment(gold 強調枠)を流用 -->
+    <div id="pf-syn-sections" style="display:flex;flex-direction:column;gap:22px;margin-top:28px;">
+
+      <!-- ① fiveElement -->
+      <div class="pf-syn-section" id="pf-syn-fiveElement">
+        <div class="pf-syn-subhead">
+          <span class="pf-syn-en">ELEMENTAL RESONANCE</span>
+          <span class="pf-syn-ja">あなたと相手の気質の相性</span>
+        </div>
+        <div class="pf-syn-body" id="pf-syn-fiveElement-body">─</div>
+      </div>
+
+      <!-- ② twelveStage -->
+      <div class="pf-syn-section" id="pf-syn-twelveStage">
+        <div class="pf-syn-subhead">
+          <span class="pf-syn-en">LIFE ENERGY</span>
+          <span class="pf-syn-ja">2人のテンポ・関係構築までのタイムライン</span>
+        </div>
+        <div class="pf-syn-body" id="pf-syn-twelveStage-body">─</div>
+      </div>
+
+      <!-- ③ topGodPair -->
+      <div class="pf-syn-section" id="pf-syn-topGodPair">
+        <div class="pf-syn-subhead">
+          <span class="pf-syn-en">INNER COMPASS</span>
+          <span class="pf-syn-ja">人生のモチベーション</span>
+        </div>
+        <div class="pf-syn-body" id="pf-syn-topGodPair-body">─</div>
+      </div>
+
+      <!-- ④ kishin -->
+      <div class="pf-syn-section" id="pf-syn-kishin">
+        <div class="pf-syn-subhead">
+          <span class="pf-syn-en">FORTUNE RHYTHM</span>
+          <span class="pf-syn-ja">2人の運気の同期度</span>
+        </div>
+        <div class="pf-syn-body" id="pf-syn-kishin-body">─</div>
+      </div>
+
+      <!-- ⑤ specialStar -->
+      <div class="pf-syn-section" id="pf-syn-specialStar">
+        <div class="pf-syn-subhead">
+          <span class="pf-syn-en">DESTINY STARS</span>
+          <span class="pf-syn-ja">持って生まれた縁の形</span>
+        </div>
+        <div class="pf-syn-body" id="pf-syn-specialStar-body">─</div>
+      </div>
+
+    </div>
+
+    <!-- ⑥ conclusion(既存 pf-synthesis-comment を流用、ラベルと子要素を変更) -->
+    <div id="pf-synthesis-comment" style="padding:20px 22px;border-radius:14px;background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.22);margin-top:22px;">
+      <div style="font-size:9px;letter-spacing:.2em;margin-bottom:10px;">
+        <span class="pf-syn-en" style="color:rgba(201,168,76,.7);">ESSENCE OF BOND</span>
+        <span class="pf-syn-ja" style="font-size:15px;margin-left:8px;">2人の縁の本質</span>
+      </div>
+      <!-- 旧: pf-mbti-gogyo-comment は一時的に display:none で温存(ステップ 4d で削除予定) -->
+      <div id="pf-mbti-gogyo-comment" style="display:none;">─</div>
+      <!-- 新: conclusion 専用 body -->
+      <div class="pf-syn-body" id="pf-syn-conclusion-body" style="font-size:14px;color:rgba(232,228,217,.88);line-height:2.1;font-family:'Shippori Mincho',serif;">─</div>
+    </div>
+    </div><!-- /pf-synthesis-subsections -->
+  </div>
+
 
 </div><!-- /content -->
 

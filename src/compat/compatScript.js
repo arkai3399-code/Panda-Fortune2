@@ -3082,7 +3082,7 @@ window._pfRunCompatScript = function() {
 
   // ══ アコーディオン初期化 ══
   // sec-label の直後の兄弟要素群を pf-acc-body で包み、デフォルト折りたたみにする
-  var accIds = ['pf-acc-personality','pf-acc-howsee','pf-acc-astrology','pf-acc-mbti','pf-acc-synthesis','pf-acc-timing'];
+  var accIds = ['pf-acc-personality','pf-acc-howsee','pf-acc-astrology','pf-acc-mbti','pf-acc-timing','pf-acc-synthesis'];
   accIds.forEach(function(accId) {
     var card = document.getElementById(accId);
     // pf-mbti-section は data-acc-id で参照
