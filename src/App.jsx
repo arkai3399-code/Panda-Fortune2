@@ -24,6 +24,7 @@ import { langPick, tt } from './i18n/templateHelpers.js';
 import * as AT from './data/appTemplatesKr.js';
 import { getStarDescByLang, buildStarFallback_JA, buildStarFallback_KR, getKuubouDescByLang, getTsuhenInfoByLang } from './data/meishikiInlineDescs.js';
 import { getTenkanIcon, getTenkanYomi } from './data/tenkanIcons.js';
+import { getChishiIcon, getChishiYomi } from './data/chishiIcons.js';
 import * as ACK from './data/aiChatKr.js';
 import { translatePopoAnswer } from './data/popoAnswersKr.js';
 import {
@@ -4593,11 +4594,15 @@ function FortuneResult() {
                           return (
                             <div style={{ padding: "14px 8px 10px", textAlign: "center", borderBottom: "1px solid rgba(80,60,30,0.10)" }}>
                               <p style={{ fontSize: 11, color: "rgba(60,40,20,0.4)", marginBottom: 6, letterSpacing: "0.1em" }}>地支</p>
+                              {getChishiIcon(p.shi) && (
+                                <div style={{ width: 48, height: 48, margin: "0 auto 6px" }} dangerouslySetInnerHTML={{ __html: getChishiIcon(p.shi) }} />
+                              )}
                               <p style={{
                                 fontSize: 44, fontFamily: "'Shippori Mincho',serif", fontWeight: 700, lineHeight: 1,
                                 color: isDay ? "#8a6a20" : sgc,
                               }}>{p.shi}</p>
-                              <p style={{ fontSize: 13, color: sgc, marginTop: 6, fontWeight: 600 }}>{shiGogyo}</p>
+                              <p style={{ fontSize: 12, color: isDay ? "#8a6a20" : "rgba(60,40,20,0.5)", marginTop: 6 }}>{getChishiYomi(p.shi)}</p>
+                              <p style={{ fontSize: 13, color: sgc, marginTop: 4, fontWeight: 600 }}>{shiGogyo}</p>
                             </div>
                           );
                         })()}
