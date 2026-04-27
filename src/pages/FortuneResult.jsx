@@ -1748,7 +1748,12 @@ function FortuneResult({ initialCalc, initialUi: initialUiProp }) {
 
               {/* 今日の運勢（トップ） */}
               <Card glow>
-                <SectionLabel en="TODAY · 2026年3月12日（水）" ja="今日の運勢" />
+                {(() => {
+                  const _tlD = new Date(); _tlD.setDate(_tlD.getDate() + timelineOffset);
+                  const _tlS = calcDailyScore(M._calc, _tlD);
+                  const _tlLabel = timelineOffset === 0 ? 'TODAY' : timelineOffset === -1 ? '昨日' : '一昨日';
+                  return <SectionLabel en={`${_tlLabel} · ${_tlS.dateStr}`} ja="今日の運勢" />;
+                })()}
                 <TodayFortuneBlock onOpenDetail={(tab) => { setActiveTab(tab); }} calc={M._calc} offset={timelineOffset} setOffset={setTimelineOffset} />
               </Card>
 

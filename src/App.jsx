@@ -1070,42 +1070,7 @@ const KaiUnCalendar = ({ calc }) => {
 };
 
 // ── 今日の運勢ブロック ──
-const DAILY_LOG = {
-  // offset 0=今日, -1=昨日, -2=一昨日（合計3日間）
-  0: {
-    date: "2026年3月12日（木）",
-    kanshi: "壬辰",
-    scores: [
-      { label: "総合運",     value: 74, color: "#C9A84C",              icon: "☯️", comment: "全体的に流れのいい日。直感を信じてサクッと動くといいんダ。",       tab: null },
-      { label: "恋愛運", value: 68, color: "rgba(220,100,130,0.9)", icon: "💕", comment: "気持ちが空回りしやすい日。焦らず、ありのままでいるのが一番ンダ。", tab: "love" },
-      { label: "仕事運",     value: 80, color: "rgba(100,180,220,0.9)", icon: "💼", comment: "今日は追い風が吹いているんダ。提案や発信に打って出るのに最高の日ンダよ。",   tab: "work" },
-      { label: "金運",       value: 72, color: "rgba(160,200,100,0.9)", icon: "💰", comment: "小さな衝動買いに注意。思いがけない収入が入ってくる予感もあるんダ🐼",         tab: "money" },
-    ],
-    popo: "今日は判断力と直感が冴える日ンダ。先延ばしにしていたことを動かすのにちょうどいいタイミングンダよ。ただ夕方以降は気持ちが揺れやすくなるから、感情的になりそうな場面は午前中に片付けておくといいんダ🐼",
-  },
-  "-1": {
-    date: "2026年3月11日（水）",
-    kanshi: "辛卯",
-    scores: [
-      { label: "総合運",     value: 82, color: "#C9A84C",              icon: "☯️", comment: "昨日は全体的にツキが回っていた日だったンダ。流れに乗れたなら大正解ンダよ。", tab: null },
-      { label: "恋愛運", value: 78, color: "rgba(220,100,130,0.9)", icon: "💕", comment: "春の穏やかな空気のおかげで、素直に気持ちを伝えやすい日だったんダよ。", tab: "love" },
-      { label: "仕事運",     value: 85, color: "rgba(100,180,220,0.9)", icon: "💼", comment: "何を提案しても通りやすい日だったンダ。昨日動いた人は正解ンダよ。", tab: "work" },
-      { label: "金運",       value: 80, color: "rgba(160,200,100,0.9)", icon: "💰", comment: "お金の流れが良かった日ンダ。思いがけない収入や恵みがあったかもンダ🐼", tab: "money" },
-    ],
-    popo: "昨日は提案・交渉・発信すべてに追い風が吹いていた日ンダ。何か動いた人は正解ンダよ。その流れは今日もまだ続いているから、昨日始めたことをそのまま押し進めるといいんダ🐼",
-  },
-  "-2": {
-    date: "2026年3月10日（火）",
-    kanshi: "庚寅",
-    scores: [
-      { label: "総合運",     value: 76, color: "#C9A84C",              icon: "☯️", comment: "安定した一日だったんダ。大きな波はなく、着実に進めた日ンダよ。", tab: null },
-      { label: "恋愛運", value: 70, color: "rgba(220,100,130,0.9)", icon: "💕", comment: "表現力が高まっていた日ンダ。気持ちを言葉にしやすかったはずンダよ。", tab: "love" },
-      { label: "仕事運",     value: 78, color: "rgba(100,180,220,0.9)", icon: "💼", comment: "段取りが整いやすい日だったんダ。計画通りに進めやすい運気ンダよ。", tab: "work" },
-      { label: "金運",       value: 68, color: "rgba(160,200,100,0.9)", icon: "💰", comment: "金運は普通の一日ンダ。大きな動きはなく、安定していたんダよ🐼", tab: "money" },
-    ],
-    popo: "一昨日は地味に見えて、実はじわじわと運気が上向いていた日ンダ。大きな動きより「整える・準備する」作業がはかどりやすかったはずンダよ。この2日間で積み上げたことが、今日の運気の土台になっているんダ🐼",
-  },
-};
+// DAILY_LOG は削除済み — TodayFortuneBlock が calcDailyScore() で動的生成
 
 const OFFSET_LABELS = {
   0:    { short: "今日",   badge: null },
@@ -5534,7 +5499,12 @@ function FortuneResult() {
 
               {/* 今日の運勢（トップ） */}
               <Card glow>
-                <SectionLabel en="TODAY · 2026年3月12日（水）" ja="今日の運勢" />
+                {(() => {
+                  const _tlD = new Date(); _tlD.setDate(_tlD.getDate() + timelineOffset);
+                  const _tlS = calcDailyScore(M._calc, _tlD);
+                  const _tlLabel = timelineOffset === 0 ? 'TODAY' : timelineOffset === -1 ? '昨日' : '一昨日';
+                  return <SectionLabel en={`${_tlLabel} · ${_tlS.dateStr}`} ja="今日の運勢" />;
+                })()}
                 <TodayFortuneBlock onOpenDetail={(tab) => { setActiveTab(tab); }} calc={M._calc} offset={timelineOffset} setOffset={setTimelineOffset} />
               </Card>
 
